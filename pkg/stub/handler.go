@@ -23,7 +23,7 @@ type Handler struct {
 
 func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	switch o := event.Object.(type) {
-	case *v1alpha1.ConfigTemplate:
+	case *v1alpha1.KonfiguratorTemplate:
 		err := sdk.Create(newbusyBoxPod(o))
 		if err != nil && !errors.IsAlreadyExists(err) {
 			logrus.Errorf("Failed to create busybox pod : %v", err)
@@ -34,7 +34,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 }
 
 // newbusyBoxPod demonstrates how to create a busybox pod
-func newbusyBoxPod(cr *v1alpha1.ConfigTemplate) *corev1.Pod {
+func newbusyBoxPod(cr *v1alpha1.KonfiguratorTemplate) *corev1.Pod {
 	labels := map[string]string{
 		"app": "busy-box",
 	}
@@ -50,7 +50,7 @@ func newbusyBoxPod(cr *v1alpha1.ConfigTemplate) *corev1.Pod {
 				*metav1.NewControllerRef(cr, schema.GroupVersionKind{
 					Group:   v1alpha1.SchemeGroupVersion.Group,
 					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "ConfigTemplate",
+					Kind:    "KonfiguratorTemplate",
 				}),
 			},
 			Labels: labels,

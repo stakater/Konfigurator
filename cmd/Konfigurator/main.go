@@ -24,7 +24,7 @@ func main() {
 	sdk.ExposeMetricsPort()
 
 	resource := "konfigurator.stakater.com/v1alpha1"
-	kind := "ConfigTemplate"
+	kind := "KonfiguratorTemplate"
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		logrus.Fatalf("Failed to get watch namespace: %v", err)

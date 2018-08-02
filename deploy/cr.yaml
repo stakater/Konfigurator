@@ -1,4 +1,4 @@
 apiVersion: "konfigurator.stakater.com/v1alpha1"
-kind: "ConfigTemplate"
+kind: "KonfiguratorTemplate"
 metadata:
   name: "example"

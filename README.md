@@ -4,7 +4,7 @@ A kubernetes operator that can dynamically generate app configuration when kuber
 
 ## Design
 
-The operator itself will have a CRD named `ConfigTemplate` that can define some of the following properties in the spec:
+The operator itself will have a CRD named `KonfiguratorTemplate` that can define some of the following properties in the spec:
 
 - templates
 - volumeMounts
@@ -16,11 +16,11 @@ The `templates` defined can use the go templating syntax to create the configura
 - Services (.Services)
 - Ingresses (.Ingresses)
 
-An example `ConfigTemplate` with fluentd config looks like the following:
+An example `KonfiguratorTemplate` with fluentd config looks like the following:
 
 ```yaml
 apiVersion: konfigurator.stakater.com/v1
-kind: ConfigTemplate
+kind: KonfiguratorTemplate
 metadata:
     labels:
         apps: yourapp

@@ -7,28 +7,30 @@ import (
 type Phase string
 
 const (
-	PhaseInitial  Phase = ""
-	PhaseRendered Phase = "Rendered"
+	PhaseInitial           Phase = ""
+	PhaseRendering         Phase = "Rendering"
+	PhaseCreatingConfigMap Phase = "CreatingConfigMap"
+	PhaseRendered          Phase = "Rendered"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ConfigTemplateList struct {
+type KonfiguratorTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []ConfigTemplate `json:"items"`
+	Items           []KonfiguratorTemplate `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ConfigTemplate struct {
+type KonfiguratorTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ConfigTemplateSpec   `json:"spec"`
-	Status            ConfigTemplateStatus `json:"status,omitempty"`
+	Spec              KonfiguratorTemplateSpec   `json:"spec"`
+	Status            KonfiguratorTemplateStatus `json:"status,omitempty"`
 }
 
-type ConfigTemplateSpec struct {
+type KonfiguratorTemplateSpec struct {
 	RenderTarget string            `json:"renderTarget"`
 	VolumeMounts []VolumeMount     `json:"volumeMounts"`
 	Templates    map[string]string `json:"templates"`
@@ -39,6 +41,6 @@ type VolumeMount struct {
 	Container string `json:"container"`
 }
 
-type ConfigTemplateStatus struct {
+type KonfiguratorTemplateStatus struct {
 	CurrentPhase Phase `json:"currentPhase"`
 }
