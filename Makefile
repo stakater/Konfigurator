@@ -17,7 +17,7 @@ binary-image:
 	operator-sdk build ${DOCKER_IMAGE}:${DOCKER_TAG}
 
 lint:
-	golangci-lint run --enable-all
+	golangci-lint run --enable-all --skip-dirs vendor
 
 push:
 	docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
