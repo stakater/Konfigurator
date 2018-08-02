@@ -5,7 +5,7 @@ DOCKER_IMAGE ?= stakater/konfigurator
 # Default value "dev"
 DOCKER_TAG ?= dev
 
-install:  fetch-dependencies lint
+install:  fetch-dependencies
 
 fetch-dependencies:
 	dep ensure -v
