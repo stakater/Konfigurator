@@ -11,7 +11,7 @@ install:
 test:
 	go test -v ./...
 
-builder-image:
+binary-image:
 	operator-sdk build ${DOCKER_IMAGE}:${DOCKER_TAG}
 
 push:
