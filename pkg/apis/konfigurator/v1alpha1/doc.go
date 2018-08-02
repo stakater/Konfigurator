@@ -1,3 +1,3 @@
 // +k8s:deepcopy-gen=package
 // +groupName=konfigurator.stakater.com
-package v1
+package v1alpha1

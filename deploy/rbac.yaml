@@ -1,13 +1,7 @@
----
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: konfigurator
----
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: konfigurator-role
+  name: Konfigurator
 rules:
 - apiGroups:
   - konfigurator.stakater.com
@@ -42,12 +36,11 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: konfigurator-rolebinding
+  name: default-account-Konfigurator
 subjects:
 - kind: ServiceAccount
-  name: konfigurator
-  namespace: default
+  name: default
 roleRef:
   kind: Role
-  name: konfigurator-role
+  name: Konfigurator
   apiGroup: rbac.authorization.k8s.io

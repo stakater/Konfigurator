@@ -1,4 +1,4 @@
-package v1
+package v1alpha1
 
 import (
 	sdkK8sutil "github.com/operator-framework/operator-sdk/pkg/util/k8sutil"
@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	version   = "v1"
+	version   = "v1alpha1"
 	groupName = "konfigurator.stakater.com"
 )
 

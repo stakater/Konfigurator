@@ -1,0 +1,13 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: configtemplates.konfigurator.stakater.com
+spec:
+  group: konfigurator.stakater.com
+  names:
+    kind: ConfigTemplate
+    listKind: ConfigTemplateList
+    plural: configtemplates
+    singular: configtemplate
+  scope: Namespaced
+  version: v1alpha1
