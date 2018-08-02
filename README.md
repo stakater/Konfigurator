@@ -57,8 +57,8 @@ Konfigurator will render the templates provided in the resource and create a new
 
 ## TODO
 
-- [ ] Add deployment configuration to the repository
-- [ ] Create an initial skeleton of the operator using the operator-sdk
+- [x] Add deployment configuration to the repository
+- [x] Create an initial skeleton of the operator using the operator-sdk
 - [ ] Add the ability to generate configmaps from CRD
 - [ ] Add the ability to generate secrets from CRD
 - [ ] Implement watch for the following:
