@@ -1,21 +1,21 @@
 package configtemplate
 
 import (
-	api "github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1"
+	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 )
 
 type ConfigTemplateController struct {
-	ConfigTemplate *api.ConfigTemplate
+	ConfigTemplate *v1alpha1.ConfigTemplate
 	Deleted        bool
 }
 
-func NewController(configTemplate *api.ConfigTemplate, deleted bool) *ConfigTemplateController {
+func NewController(configTemplate *v1alpha1.ConfigTemplate, deleted bool) *ConfigTemplateController {
 	return &ConfigTemplateController{
 		ConfigTemplate: configTemplate,
 		Deleted:        deleted,
 	}
 }
 
-func Reconcile(vr *api.ConfigTemplate) {
+func Reconcile(vr *v1alpha1.ConfigTemplate) {
 
 }
