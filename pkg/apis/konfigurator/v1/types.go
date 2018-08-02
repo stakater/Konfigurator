@@ -4,6 +4,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type Phase string
+
+const (
+	PhaseInitial  Phase = ""
+	PhaseRendered       = "Rendered"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ConfigTemplateList struct {
@@ -30,9 +37,6 @@ type ConfigTemplateSpec struct {
 type VolumeMount struct {
 	MountPath string `json:"mountPath"`
 	Container string `json:"container"`
-}
-
-type Template struct {
 }
 
 type ConfigTemplateStatus struct {
