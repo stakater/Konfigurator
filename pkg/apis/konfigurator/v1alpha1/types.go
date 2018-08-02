@@ -8,7 +8,7 @@ type Phase string
 
 const (
 	PhaseInitial  Phase = ""
-	PhaseRendered       = "Rendered"
+	PhaseRendered Phase = "Rendered"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -40,5 +40,5 @@ type VolumeMount struct {
 }
 
 type ConfigTemplateStatus struct {
-	// Fill me
+	CurrentPhase Phase `json:"currentPhase"`
 }
