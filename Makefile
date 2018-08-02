@@ -1,11 +1,13 @@
-.PHONY: install test builder-image push
+.PHONY: install test builder-image push lint fetch-dependencies
 
 DOCKER_IMAGE ?= stakater/konfigurator
 
 # Default value "dev"
 DOCKER_TAG ?= dev
 
-install: lint
+install:  fetch-dependencies lint
+
+fetch-dependencies:
 	dep ensure -v
 
 test:
