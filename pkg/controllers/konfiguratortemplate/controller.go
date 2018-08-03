@@ -7,6 +7,7 @@ import (
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	"github.com/stakater/Konfigurator/pkg/kube"
 	"github.com/stakater/Konfigurator/pkg/template"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -62,7 +63,12 @@ func (controller *Controller) CreateResources() error {
 		resourceToCreate = controller.createSecret(resourceName)
 	}
 
-	if err := sdk.Create(resourceToCreate.(runtime.Object)); err != nil {
+	// Try to create the resource
+	if err := sdk.Create(resourceToCreate.(runtime.Object)); err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+	// Update the resource if it already exists
+	if err := sdk.Update(resourceToCreate.(runtime.Object)); err != nil {
 		return err
 	}
 
