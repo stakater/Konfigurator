@@ -52,8 +52,8 @@ type KonfiguratorTemplateSpec struct {
 }
 
 type App struct {
-	AppName      string        `json:"appName"`
-	AppKind      AppKind       `json:"appKind"`
+	Name         string        `json:"name"`
+	Kind         AppKind       `json:"kind"`
 	VolumeMounts []VolumeMount `json:"volumeMounts"`
 }
 

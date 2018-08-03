@@ -27,7 +27,7 @@ func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate, deleted 
 }
 
 func (controller *Controller) getGeneratedResourceName() string {
-	return "konfigurator-" + controller.Resource.Spec.App.AppName + "-rendered"
+	return "konfigurator-" + controller.Resource.Spec.App.Name + "-rendered"
 }
 
 func (controller *Controller) RenderTemplates() error {
