@@ -47,14 +47,14 @@ type KonfiguratorTemplate struct {
 
 type KonfiguratorTemplateSpec struct {
 	RenderTarget RenderTarget      `json:"renderTarget"`
-	VolumeMounts []VolumeMount     `json:"volumeMounts"`
 	Templates    map[string]string `json:"templates"`
 	App          App               `json:"app"`
 }
 
 type App struct {
-	AppName string  `json:"appName"`
-	AppKind AppKind `json:"appKind"`
+	AppName      string        `json:"appName"`
+	AppKind      AppKind       `json:"appKind"`
+	VolumeMounts []VolumeMount `json:"volumeMounts"`
 }
 
 type VolumeMount struct {
