@@ -1,6 +1,8 @@
 package konfiguratortemplate
 
 import (
+	"strings"
+
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	"github.com/stakater/Konfigurator/pkg/kube"
@@ -27,11 +29,13 @@ func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate, deleted 
 }
 
 func (controller *Controller) getGeneratedResourceName() string {
-	return "konfigurator-" + controller.Resource.Spec.App.Name + "-rendered"
+	return strings.ToLower("konfigurator-" + controller.Resource.Spec.App.Name + "-rendered")
 }
 
 func (controller *Controller) RenderTemplates() error {
 	templates := controller.Resource.Spec.Templates
+
+	controller.RenderedTemplates = make(map[string]string)
 
 	for fileName, fileData := range templates {
 		// TODO: Inject Context to template
