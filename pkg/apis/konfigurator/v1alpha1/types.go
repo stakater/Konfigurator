@@ -20,6 +20,14 @@ const (
 	RenderTargetSecret    RenderTarget = "Secret"
 )
 
+type AppKind string
+
+const (
+	AppKindDeployment  AppKind = "Deployment"
+	AppKindDaemonSet   AppKind = "DaemonSet"
+	AppKindStatefulSet AppKind = "StatefulSet"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type KonfiguratorTemplateList struct {
@@ -41,7 +49,12 @@ type KonfiguratorTemplateSpec struct {
 	RenderTarget RenderTarget      `json:"renderTarget"`
 	VolumeMounts []VolumeMount     `json:"volumeMounts"`
 	Templates    map[string]string `json:"templates"`
-	AppName      string            `json:"appName"`
+	App          App               `json:"app"`
+}
+
+type App struct {
+	AppName string  `json:"appName"`
+	AppKind AppKind `json:"appKind"`
 }
 
 type VolumeMount struct {
