@@ -11,8 +11,7 @@ func AssignValueTo(target interface{}, field string, value interface{}) error {
 
 	nestedFields := strings.Split(field, ".")
 
-	var finalField *structs.Field
-	finalField = targetStruct.Field(nestedFields[0])
+	finalField := targetStruct.Field(nestedFields[0])
 
 	for i := 1; i < len(nestedFields); i++ {
 		finalField = finalField.Field(nestedFields[i])
