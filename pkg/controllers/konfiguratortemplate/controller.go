@@ -1,11 +1,13 @@
 package konfiguratortemplate
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	"github.com/stakater/Konfigurator/pkg/kube"
+	"github.com/stakater/Konfigurator/pkg/kube/mounts"
 	"github.com/stakater/Konfigurator/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,12 +22,14 @@ type Controller struct {
 	Resource          *v1alpha1.KonfiguratorTemplate
 	Deleted           bool
 	RenderedTemplates map[string]string
+	Namespace         string
 }
 
 func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate, deleted bool) *Controller {
 	return &Controller{
-		Resource: konfiguratorTemplate,
-		Deleted:  deleted,
+		Resource:  konfiguratorTemplate,
+		Deleted:   deleted,
+		Namespace: konfiguratorTemplate.Namespace,
 	}
 }
 
@@ -96,7 +100,7 @@ func (controller *Controller) createSecret(name string) metav1.Object {
 }
 
 func (controller *Controller) prepareResource(resource metav1.Object) {
-	resource.SetNamespace(controller.Resource.Namespace)
+	resource.SetNamespace(controller.Namespace)
 
 	resource.SetAnnotations(map[string]string{
 		GeneratedByAnnotation: "konfigurator",
@@ -104,7 +108,24 @@ func (controller *Controller) prepareResource(resource metav1.Object) {
 }
 
 func (controller *Controller) MountVolumes() error {
-	// TODO: Check if the app exists
-	// TODO: Mount the generated resource to the app's containers
-	return nil
+	app := kube.CreateObjectFromApp(controller.Resource.Spec.App, controller.Namespace)
+
+	// Check if the app exists
+	err := sdk.Get(app.(runtime.Object))
+	if err != nil {
+		return fmt.Errorf("Failed to get the desired app: %v", err)
+	}
+
+	// Mount volumes to the specified resource
+	mountManager := mounts.NewManager(
+		controller.getGeneratedResourceName(),
+		controller.Resource.Spec.RenderTarget,
+		app)
+
+	err = mountManager.MountVolumes(controller.Resource.Spec.App.VolumeMounts)
+	if err != nil {
+		return fmt.Errorf("Failed to assign volume mounts to the specified resource: %v", err)
+	}
+
+	return sdk.Update(app.(runtime.Object))
 }
