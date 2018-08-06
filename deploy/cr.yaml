@@ -5,13 +5,13 @@ metadata:
 spec:
   renderTarget: ConfigMap
   app:
-    name: TestApp
+    name: testapp
     kind: Deployment
     volumeMounts:
     - mountPath: /var/cfg
-      container: testcontainer
+      container: tutum
   templates:
     test.conf: |
       hello world
     test2.conf: |
-      hello world 2
+      hello world 2s
