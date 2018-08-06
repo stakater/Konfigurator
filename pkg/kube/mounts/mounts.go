@@ -38,7 +38,7 @@ func (mm *MountManager) MountVolumes(volumeMountConfigs []v1alpha1.VolumeMount) 
 		return err
 	}
 
-	var containersToUpdate []corev1.Container
+	containersToUpdate := make([]corev1.Container, 0, len(volumeMountConfigs))
 
 	for _, volumeMountConfig := range volumeMountConfigs {
 		container, err := mm.findContainerWithName(volumeMountConfig.Container)
