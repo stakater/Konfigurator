@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/stakater/Konfigurator/pkg/kube/mounts"
+
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	"github.com/stakater/Konfigurator/pkg/kube"
-	"github.com/stakater/Konfigurator/pkg/kube/mounts"
 	"github.com/stakater/Konfigurator/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,15 +21,13 @@ const (
 
 type Controller struct {
 	Resource          *v1alpha1.KonfiguratorTemplate
-	Deleted           bool
 	RenderedTemplates map[string]string
 	Namespace         string
 }
 
-func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate, deleted bool) *Controller {
+func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate) *Controller {
 	return &Controller{
 		Resource:  konfiguratorTemplate,
-		Deleted:   deleted,
 		Namespace: konfiguratorTemplate.Namespace,
 	}
 }
@@ -79,6 +78,69 @@ func (controller *Controller) CreateResources() error {
 	return nil
 }
 
+func (controller *Controller) MountVolumes() error {
+	return controller.handleVolumes(func(mountManager *mounts.MountManager) error {
+		err := mountManager.MountVolumes(controller.Resource.Spec.App.VolumeMounts)
+		if err != nil {
+			return fmt.Errorf("Failed to assign volume mounts to the specified resource: %v", err)
+		}
+
+		return nil
+	})
+}
+
+func (controller *Controller) UnmountVolumes() error {
+	return controller.handleVolumes(func(mountManager *mounts.MountManager) error {
+		err := mountManager.UnmountVolumes()
+		if err != nil {
+			return fmt.Errorf("Failed to unmount volume mounts from the specified resource: %v", err)
+		}
+
+		return nil
+	})
+}
+
+func (controller *Controller) DeleteResources() error {
+	return nil
+}
+
+func (controller *Controller) handleVolumes(handleVolumesFunc func(*mounts.MountManager) error) error {
+	mountManager, err := controller.createMountManager()
+	if err != nil {
+		return err
+	}
+
+	err = handleVolumesFunc(mountManager)
+
+	return sdk.Update(mountManager.Target.(runtime.Object))
+
+}
+
+func (controller *Controller) createMountManager() (*mounts.MountManager, error) {
+	app, err := controller.fetchAppObject()
+	if err != nil {
+		return nil, err
+	}
+
+	// Mount volumes to the specified resource
+	return mounts.NewManager(
+		controller.getGeneratedResourceName(),
+		controller.Resource.Spec.RenderTarget,
+		app), nil
+}
+
+func (controller *Controller) fetchAppObject() (metav1.Object, error) {
+	app := kube.CreateObjectFromApp(controller.Resource.Spec.App, controller.Namespace)
+
+	// Check if the app exists
+	err := sdk.Get(app.(runtime.Object))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get the desired app: %v", err)
+	}
+
+	return app, nil
+}
+
 func (controller *Controller) createConfigMap(name string) metav1.Object {
 	configmap := kube.CreateConfigMap(name)
 	controller.prepareResource(configmap)
@@ -105,27 +167,4 @@ func (controller *Controller) prepareResource(resource metav1.Object) {
 	resource.SetAnnotations(map[string]string{
 		GeneratedByAnnotation: "konfigurator",
 	})
-}
-
-func (controller *Controller) MountVolumes() error {
-	app := kube.CreateObjectFromApp(controller.Resource.Spec.App, controller.Namespace)
-
-	// Check if the app exists
-	err := sdk.Get(app.(runtime.Object))
-	if err != nil {
-		return fmt.Errorf("Failed to get the desired app: %v", err)
-	}
-
-	// Mount volumes to the specified resource
-	mountManager := mounts.NewManager(
-		controller.getGeneratedResourceName(),
-		controller.Resource.Spec.RenderTarget,
-		app)
-
-	err = mountManager.MountVolumes(controller.Resource.Spec.App.VolumeMounts)
-	if err != nil {
-		return fmt.Errorf("Failed to assign volume mounts to the specified resource: %v", err)
-	}
-
-	return sdk.Update(app.(runtime.Object))
 }

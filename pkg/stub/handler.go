@@ -21,22 +21,28 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	switch o := event.Object.(type) {
 
 	case *v1alpha1.KonfiguratorTemplate:
-		return h.HandleKonfiguratorTemplate(konfiguratortemplate.NewController(o, event.Deleted))
+		return h.HandleKonfiguratorTemplate(konfiguratortemplate.NewController(o), event.Deleted)
 	}
 
 	return nil
 }
 
-func (h *Handler) HandleKonfiguratorTemplate(controller *konfiguratortemplate.Controller) error {
+func (h *Handler) HandleKonfiguratorTemplate(controller *konfiguratortemplate.Controller, deleted bool) error {
+	if deleted {
+		// Delegate delete calls to controller
+		if err := controller.UnmountVolumes(); err != nil {
+			return err
+		}
+
+		return controller.DeleteResources()
+	}
+
 	if err := controller.RenderTemplates(); err != nil {
 		return err
 	}
 	if err := controller.CreateResources(); err != nil {
 		return err
 	}
-	if err := controller.MountVolumes(); err != nil {
-		return err
-	}
 
-	return nil
+	return controller.MountVolumes()
 }

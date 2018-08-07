@@ -3,6 +3,7 @@ package mounts
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	"github.com/stakater/Konfigurator/pkg/kube/lists/containers"
 	"github.com/stakater/Konfigurator/pkg/kube/lists/volumes"
@@ -20,14 +21,14 @@ const (
 type MountManager struct {
 	resourceToMount string
 	resourceKind    v1alpha1.RenderTarget
-	target          metav1.Object
+	Target          metav1.Object
 }
 
 func NewManager(resourceToMount string, resourceKind v1alpha1.RenderTarget, target metav1.Object) *MountManager {
 	return &MountManager{
 		resourceToMount: resourceToMount,
 		resourceKind:    resourceKind,
-		target:          target,
+		Target:          target,
 	}
 }
 
@@ -53,8 +54,54 @@ func (mm *MountManager) MountVolumes(volumeMountConfigs []v1alpha1.VolumeMount) 
 	return mm.updateContainersInTarget(containersToUpdate)
 }
 
+func (mm *MountManager) UnmountVolumes() error {
+	logrus.Info("Called UnmountVolumes")
+	if err := mm.removeVolumeMounts(); err != nil {
+		return err
+	}
+
+	return mm.removeVolume()
+
+}
+
+func (mm *MountManager) removeVolume() error {
+	volumes := volumes.GetFromObject(mm.Target)
+
+	if !mm.volumeExists(volumes) {
+		return fmt.Errorf("Could not find the desired volume mount on the app resource")
+	}
+
+	desiredVolumes := volumes[:0]
+	for _, volume := range volumes {
+		if volume.Name != mm.resourceToMount {
+			desiredVolumes = append(desiredVolumes, volume)
+		}
+	}
+
+	return kubereflect.AssignValueTo(mm.Target, VolumesFieldPath, volumes)
+}
+
+func (mm *MountManager) removeVolumeMounts() error {
+	containers := containers.GetFromObject(mm.Target)
+	for _, container := range containers {
+		desiredVolumeMounts := container.VolumeMounts[:0]
+
+		for _, volumeMount := range container.VolumeMounts {
+			if mm.resourceToMount != volumeMount.Name {
+				desiredVolumeMounts = append(desiredVolumeMounts, volumeMount)
+			}
+		}
+
+		logrus.Info(desiredVolumeMounts)
+
+		container.VolumeMounts = desiredVolumeMounts
+	}
+
+	return kubereflect.AssignValueTo(mm.Target, ContainersFieldPath, containers)
+}
+
 func (mm *MountManager) updateContainersInTarget(containersToUpdate []corev1.Container) error {
-	appContainers := containers.GetFromObject(mm.target)
+	appContainers := containers.GetFromObject(mm.Target)
 
 	containers.ForEach(containersToUpdate, func(cIndex int, containerToUpdate corev1.Container) {
 		containers.ForEach(appContainers, func(aIndex int, appContainer corev1.Container) {
@@ -64,7 +111,7 @@ func (mm *MountManager) updateContainersInTarget(containersToUpdate []corev1.Con
 		})
 	})
 
-	return kubereflect.AssignValueTo(mm.target, ContainersFieldPath, appContainers)
+	return kubereflect.AssignValueTo(mm.Target, ContainersFieldPath, appContainers)
 }
 
 func (mm *MountManager) addMountToContainer(container *corev1.Container, mountPath string) {
@@ -92,7 +139,7 @@ func (mm *MountManager) volumeMountExists(volumeMounts []corev1.VolumeMount) boo
 }
 
 func (mm *MountManager) addVolumeIfNotExists() error {
-	volumes := volumes.GetFromObject(mm.target)
+	volumes := volumes.GetFromObject(mm.Target)
 
 	if !mm.volumeExists(volumes) {
 		volume, err := mm.createVolume()
@@ -102,7 +149,7 @@ func (mm *MountManager) addVolumeIfNotExists() error {
 		volumes = append(volumes, *volume)
 	}
 
-	return kubereflect.AssignValueTo(mm.target, VolumesFieldPath, volumes)
+	return kubereflect.AssignValueTo(mm.Target, VolumesFieldPath, volumes)
 }
 
 func (mm *MountManager) volumeExists(volumes []corev1.Volume) bool {
@@ -126,7 +173,7 @@ func (mm *MountManager) createVolume() (*corev1.Volume, error) {
 }
 
 func (mm *MountManager) findContainerWithName(name string) (*corev1.Container, error) {
-	for _, container := range containers.GetFromObject(mm.target) {
+	for _, container := range containers.GetFromObject(mm.Target) {
 		if container.Name == name {
 			return &container, nil
 		}
