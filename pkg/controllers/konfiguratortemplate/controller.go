@@ -8,6 +8,7 @@ import (
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
+	kContext "github.com/stakater/Konfigurator/pkg/context"
 	"github.com/stakater/Konfigurator/pkg/kube"
 	"github.com/stakater/Konfigurator/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -23,12 +24,14 @@ type Controller struct {
 	Resource          *v1alpha1.KonfiguratorTemplate
 	RenderedTemplates map[string]string
 	Namespace         string
+	Context           *kContext.Context
 }
 
-func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate) *Controller {
+func NewController(konfiguratorTemplate *v1alpha1.KonfiguratorTemplate, context *kContext.Context) *Controller {
 	return &Controller{
 		Resource:  konfiguratorTemplate,
 		Namespace: konfiguratorTemplate.Namespace,
+		Context:   context,
 	}
 }
 
@@ -42,8 +45,7 @@ func (controller *Controller) RenderTemplates() error {
 	controller.RenderedTemplates = make(map[string]string)
 
 	for fileName, fileData := range templates {
-		// TODO: Inject Context to template
-		rendered, err := template.ExecuteString(fileData, nil)
+		rendered, err := template.ExecuteString(fileData, controller.Context)
 		if err != nil {
 			return err
 		}
