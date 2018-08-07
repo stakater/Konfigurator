@@ -59,10 +59,10 @@ Konfigurator will render the templates provided in the resource and create a new
 
 - [x] Add deployment configuration to the repository
 - [x] Create an initial skeleton of the operator using the operator-sdk
-- [ ] Add the ability to generate configmaps from CRD
-- [ ] Add the ability to generate secrets from CRD
-- [ ] Implement watch for the following:
+- [x] Add the ability to generate configmaps from CRD
+- [x] Add the ability to generate secrets from CRD
+- [x] Implement watch for the following:
 
-  - [ ] Pods
-  - [ ] Services
-  - [ ] Ingresses
+  - [x] Pods
+  - [x] Services
+  - [x] Ingresses
