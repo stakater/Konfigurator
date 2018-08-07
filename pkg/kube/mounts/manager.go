@@ -3,7 +3,6 @@ package mounts
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	"github.com/stakater/Konfigurator/pkg/kube/lists/containers"
 	"github.com/stakater/Konfigurator/pkg/kube/lists/volumes"
@@ -55,7 +54,6 @@ func (mm *MountManager) MountVolumes(volumeMountConfigs []v1alpha1.VolumeMount) 
 }
 
 func (mm *MountManager) UnmountVolumes() error {
-	logrus.Info("Called UnmountVolumes")
 	if err := mm.removeVolumeMounts(); err != nil {
 		return err
 	}
@@ -91,8 +89,6 @@ func (mm *MountManager) removeVolumeMounts() error {
 				desiredVolumeMounts = append(desiredVolumeMounts, volumeMount)
 			}
 		}
-
-		logrus.Info(desiredVolumeMounts)
 
 		container.VolumeMounts = desiredVolumeMounts
 	}
