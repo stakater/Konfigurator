@@ -103,7 +103,13 @@ func (controller *Controller) UnmountVolumes() error {
 }
 
 func (controller *Controller) DeleteResources() error {
-	return nil
+	switch controller.Resource.Spec.RenderTarget {
+	case v1alpha1.RenderTargetConfigMap:
+		return controller.deleteConfigMap()
+	case v1alpha1.RenderTargetSecret:
+		return controller.deleteSecret()
+	}
+	return fmt.Errorf("Invalid render target in KonfiguratorTemplate %v", controller.Resource.Spec.RenderTarget)
 }
 
 func (controller *Controller) handleVolumes(handleVolumesFunc func(*mounts.MountManager) error) error {
@@ -161,6 +167,20 @@ func (controller *Controller) createSecret(name string) metav1.Object {
 	secret.Data = kube.ToSecretData(controller.RenderedTemplates)
 
 	return secret
+}
+
+func (controller *Controller) deleteConfigMap() error {
+	configmap := kube.CreateConfigMap(controller.getGeneratedResourceName())
+	controller.prepareResource(configmap)
+
+	return sdk.Delete(configmap)
+}
+
+func (controller *Controller) deleteSecret() error {
+	secret := kube.CreateSecret(controller.getGeneratedResourceName())
+	controller.prepareResource(secret)
+
+	return sdk.Delete(secret)
 }
 
 func (controller *Controller) prepareResource(resource metav1.Object) {
