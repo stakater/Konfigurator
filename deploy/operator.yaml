@@ -1,19 +1,19 @@
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: Konfigurator
+  name: konfigurator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: Konfigurator
+      name: konfigurator
   template:
     metadata:
       labels:
-        name: Konfigurator
+        name: konfigurator
     spec:
       containers:
-        - name: Konfigurator
+        - name: konfigurator
           image: stakater/konfigurator:dev
           ports:
           - containerPort: 60000
@@ -27,4 +27,5 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
-              value: "Konfigurator"
+              value: "konfigurator"
+      serviceAccountName: konfigurator

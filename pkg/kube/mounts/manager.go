@@ -64,7 +64,7 @@ func (mm *MountManager) UnmountVolumes() error {
 
 func (mm *MountManager) removeVolume() error {
 	volumes := volumes.GetFromObject(mm.Target)
-
+	
 	if !mm.volumeExists(volumes) {
 		return fmt.Errorf("Could not find the desired volume mount on the app resource")
 	}
@@ -76,21 +76,21 @@ func (mm *MountManager) removeVolume() error {
 		}
 	}
 
-	return kubereflect.AssignValueTo(mm.Target, VolumesFieldPath, volumes)
+	return kubereflect.AssignValueTo(mm.Target, VolumesFieldPath, desiredVolumes)
 }
 
 func (mm *MountManager) removeVolumeMounts() error {
 	containers := containers.GetFromObject(mm.Target)
-	for _, container := range containers {
-		desiredVolumeMounts := container.VolumeMounts[:0]
+	for i := 0; i < len(containers); i++ {
+		desiredVolumeMounts := containers[i].VolumeMounts[:0]
 
-		for _, volumeMount := range container.VolumeMounts {
+		for _, volumeMount := range containers[i].VolumeMounts {
 			if mm.resourceToMount != volumeMount.Name {
 				desiredVolumeMounts = append(desiredVolumeMounts, volumeMount)
 			}
 		}
 
-		container.VolumeMounts = desiredVolumeMounts
+		containers[i].VolumeMounts = desiredVolumeMounts
 	}
 
 	return kubereflect.AssignValueTo(mm.Target, ContainersFieldPath, containers)
