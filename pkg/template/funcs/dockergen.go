@@ -304,8 +304,8 @@ func exists(path string) (bool, error) {
 func stripPrefix(s, prefix string) string {
 	path := s
 	for {
-		if strings.HasPrefix(path, ".") {
-			path = path[1:]
+		if strings.HasPrefix(path, prefix) {
+			path = path[len(prefix):]
 			continue
 		}
 		break
