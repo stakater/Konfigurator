@@ -48,14 +48,19 @@ rules:
   - get
   - watch
 - apiGroups:
-  - ""
   - apps
   resources:
-  - services
   - deployments
   - daemonsets
-  - replicasets
   - statefulsets
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - services
   - configmaps
   - secrets
   verbs:
