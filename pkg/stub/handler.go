@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
+	"github.com/sirupsen/logrus"
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
 	kContext "github.com/stakater/Konfigurator/pkg/context"
 	"github.com/stakater/Konfigurator/pkg/controllers/ingress"
@@ -66,20 +67,37 @@ func (h *Handler) HandlePod(controller *pod.Controller, deleted bool) error {
 
 func (h *Handler) HandleKonfiguratorTemplate(controller *konfiguratortemplate.Controller, deleted bool) error {
 	if deleted {
+		logrus.Infof("Initiating delete for KonfiguratorTemplate: %v", controller.Resource.Name)
 		// Delegate delete calls to controller
+		logrus.Info("Unmounting volumes...")
 		if err := controller.UnmountVolumes(); err != nil {
 			return err
 		}
 
-		return controller.DeleteResources()
+		logrus.Info("Deleting resources...")
+
+		err := controller.DeleteResources()
+		if err != nil {
+			return err
+		}
+
+		logrus.Info("Deleted KonfiguratorTemplate: %v", controller.Resource.Name)
+
+		return nil
 	}
 
+	logrus.Infof("Initiating sync for KonfiguratorTemplate: %v", controller.Resource.Name)
+
+	logrus.Info("Rendering templates...")
 	if err := controller.RenderTemplates(); err != nil {
 		return err
 	}
+
+	logrus.Info("Creating resources...")
 	if err := controller.CreateResources(); err != nil {
 		return err
 	}
 
+	logrus.Info("Mounting volumes...")
 	return controller.MountVolumes()
 }
