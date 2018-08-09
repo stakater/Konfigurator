@@ -167,20 +167,6 @@ func GetStatefulSet(statefulsetName string) *appsv1.StatefulSet {
 	}
 }
 
-func getkonfiguratorTemplate() v1alpha1.KonfiguratorTemplate {
-	return v1alpha1.KonfiguratorTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       string(v1alpha1.RenderTargetConfigMap),
-			APIVersion: "v1",
-		},
-		Spec:   GetKonfiguratorTemplateSpec(),
-		Status: GetKonfiguratorTemplateStatus(),
-	}
-}
-
 func GetKonfiguratorTemplateStatus() v1alpha1.KonfiguratorTemplateStatus {
 	return v1alpha1.KonfiguratorTemplateStatus{
 		CurrentPhase: v1alpha1.PhaseInitial,
