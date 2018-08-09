@@ -126,12 +126,12 @@ func TestMapContains(t *testing.T) {
 func TestWhen(t *testing.T) {
 	firstValue := "first"
 	secondValue := "first"
-	if result := when(firstValue == secondValue, true, false); result.(bool) != true {
+	if result := when(firstValue == secondValue, true, false); !result.(bool) {
 		t.Errorf("'When' should return true, since initial condition is true, expected: '%v', actual: '%v'", true, result)
 	}
 
 	secondValue = "second"
-	if result := when(firstValue == secondValue, true, false); result.(bool) != false {
+	if result := when(firstValue == secondValue, true, false); result.(bool) {
 		t.Errorf("'When' should return false, since initial condition is false, expected: '%v', actual: '%v'", false, result)
 	}
 }
@@ -172,7 +172,7 @@ func TestIntersect(t *testing.T) {
 func TestExists(t *testing.T) {
 	path := "../../template/funcs/funcs.go"
 	result, _ := exists(path)
-	if result != true {
+	if !result {
 		t.Errorf("'exist' did not return correct value for path '%s', expected: 'true', found: '%v'", path, result)
 	}
 }
