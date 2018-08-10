@@ -119,6 +119,9 @@ func (controller *Controller) handleVolumes(handleVolumesFunc func(*mounts.Mount
 	}
 
 	err = handleVolumesFunc(mountManager)
+	if err != nil {
+		return err
+	}
 
 	return sdk.Update(mountManager.Target.(runtime.Object))
 
