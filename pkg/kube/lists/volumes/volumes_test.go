@@ -3,7 +3,7 @@ package volumes
 import (
 	"testing"
 
-	"github.com/stakater/Konfigurator/pkg/testutil"
+	"github.com/stakater/Konfigurator/pkg/kube/testutil"
 	corev1 "k8s.io/api/core/v1"
 )
 

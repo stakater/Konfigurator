@@ -5,7 +5,7 @@ import (
 
 	"github.com/stakater/Konfigurator/pkg/kube/lists/volumes"
 	objectVolume "github.com/stakater/Konfigurator/pkg/kube/objects/volume"
-	"github.com/stakater/Konfigurator/pkg/testutil"
+	"github.com/stakater/Konfigurator/pkg/kube/testutil"
 )
 
 func TestAssignValueTo(t *testing.T) {

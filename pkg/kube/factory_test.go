@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
-	"github.com/stakater/Konfigurator/pkg/testutil"
+	"github.com/stakater/Konfigurator/pkg/kube/testutil"
 	"k8s.io/api/apps/v1"
 )
 
