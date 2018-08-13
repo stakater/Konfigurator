@@ -1,4 +1,50 @@
 ---
+# Source: konfigurator/templates/operator.yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: konfigurator
+    group: com.stakater.platform
+    provider: stakater
+    version: 0.0.1
+    chart: "konfigurator-0.0.1"
+    release: "RELEASE-NAME"
+    heritage: "Tiller"
+  name: konfigurator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: konfigurator
+      group: com.stakater.platform
+      provider: stakater
+  template:
+    metadata:
+      labels:
+        app: konfigurator
+        group: com.stakater.platform
+        provider: stakater
+    spec:
+      containers:
+        - name: konfigurator
+          image: "stakater/konfigurator:0.0.1"
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 60000
+            name: metrics
+          command:
+          - Konfigurator
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OPERATOR_NAME
+              value: "konfigurator"
+      serviceAccountName: konfigurator
+
+---
 # Source: konfigurator/templates/rbac.yaml
 ---
 apiVersion: v1
