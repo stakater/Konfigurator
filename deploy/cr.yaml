@@ -15,7 +15,7 @@ spec:
       hello world
     test2.conf: |
       hello world 2s
-    test3.conf: |
+    test3.conf: |-
       {{- range $pod := .Pods }}
-        {{ $pod.Name }}
+        Pod: {{ $pod.Name }}
       {{- end }}
