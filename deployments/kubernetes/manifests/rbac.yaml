@@ -8,8 +8,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.1
-    chart: "konfigurator-0.0.1"
+    version: 0.0.2
+    chart: "konfigurator-0.0.2"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -22,8 +22,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.1
-    chart: "konfigurator-0.0.1"
+    version: 0.0.2
+    chart: "konfigurator-0.0.2"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -43,8 +43,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.1
-    chart: "konfigurator-0.0.1"
+    version: 0.0.2
+    chart: "konfigurator-0.0.2"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -65,11 +65,11 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.1
-    chart: "konfigurator-0.0.1"
+    version: 0.0.2
+    chart: "konfigurator-0.0.2"
     release: "RELEASE-NAME"
     heritage: "Tiller"
-  name: konfigurator-cluster-role
+  name: konfigurator-default-cluster-role
 rules:
 - apiGroups:
   - ""
@@ -108,11 +108,11 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.1
-    chart: "konfigurator-0.0.1"
+    version: 0.0.2
+    chart: "konfigurator-0.0.2"
     release: "RELEASE-NAME"
     heritage: "Tiller"
-  name: konfigurator-cluster-role-binding
+  name: konfigurator-default-cluster-role-binding
 subjects:
 - kind: ServiceAccount
   name: konfigurator
