@@ -92,5 +92,5 @@ subjects:
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: {{ template "name" . }}-cluster-role
+  name: {{ template "name" . }}-{{ .Release.Namespace }}-cluster-role
   apiGroup: rbac.authorization.k8s.io
