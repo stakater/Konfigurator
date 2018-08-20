@@ -60,10 +60,17 @@ rules:
   - get
   - watch
 - apiGroups:
+  - "extensions"
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
   - apps
   resources:
   - deployments
-  - daemonsets
   - statefulsets
   verbs:
   - get
