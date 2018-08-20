@@ -47,7 +47,7 @@ metadata:
   labels:
 {{ include "labels.stakater" . | indent 4 }}
 {{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}-cluster-role
+  name: {{ template "name" . }}-{{ .Release.Namespace }}-cluster-role
 rules:
 - apiGroups:
   - ""
@@ -85,7 +85,7 @@ metadata:
   labels:
 {{ include "labels.stakater" . | indent 4 }}
 {{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}-cluster-role-binding
+  name: {{ template "name" . }}-{{ .Release.Namespace }}-cluster-role-binding
 subjects:
 - kind: ServiceAccount
   name: {{ template "name" . }}
