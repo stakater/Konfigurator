@@ -8,8 +8,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.5
-    chart: "konfigurator-0.0.5"
+    version: 0.0.6
+    chart: "konfigurator-0.0.6"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -22,8 +22,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.5
-    chart: "konfigurator-0.0.5"
+    version: 0.0.6
+    chart: "konfigurator-0.0.6"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -43,8 +43,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.5
-    chart: "konfigurator-0.0.5"
+    version: 0.0.6
+    chart: "konfigurator-0.0.6"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -65,8 +65,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.5
-    chart: "konfigurator-0.0.5"
+    version: 0.0.6
+    chart: "konfigurator-0.0.6"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -82,10 +82,17 @@ rules:
   - get
   - watch
 - apiGroups:
+  - "extensions"
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
   - apps
   resources:
   - deployments
-  - daemonsets
   - statefulsets
   verbs:
   - get
@@ -108,8 +115,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.5
-    chart: "konfigurator-0.0.5"
+    version: 0.0.6
+    chart: "konfigurator-0.0.6"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
