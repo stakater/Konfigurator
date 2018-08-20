@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"k8s.io/api/core/v1"
 )
 
 // combine multiple slices into a single slice
@@ -81,4 +83,28 @@ func unmarshalJSONSafe(input string) interface{} {
 func isValidJSON(input string) bool {
 	_, err := unmarshalJSON(input)
 	return err == nil
+}
+
+func distinctPodsByOwner(pods []interface{}) []interface{} {
+	dPods := make([]interface{}, 0)
+	for _, p := range pods {
+		if !podWithOwnerExists(dPods, p.(v1.Pod)) {
+			dPods = append(dPods, p)
+		}
+	}
+	return dPods
+}
+
+func podWithOwnerExists(pods []interface{}, pod v1.Pod) bool {
+	for _, p := range pods {
+		for _, owner := range p.(v1.Pod).ObjectMeta.OwnerReferences {
+			for _, pOwner := range pod.ObjectMeta.OwnerReferences {
+				// Namespace need to be same as well since owner with same name can exist in different namespaces
+				if owner.Name == pOwner.Name && p.(v1.Pod).Namespace == pod.Namespace {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
