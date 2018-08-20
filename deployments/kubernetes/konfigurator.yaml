@@ -7,8 +7,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.2
-    chart: "konfigurator-0.0.2"
+    version: 0.0.3
+    chart: "konfigurator-0.0.3"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:0.0.2"
+          image: "stakater/konfigurator:0.0.3"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -54,8 +54,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.2
-    chart: "konfigurator-0.0.2"
+    version: 0.0.3
+    chart: "konfigurator-0.0.3"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -68,8 +68,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.2
-    chart: "konfigurator-0.0.2"
+    version: 0.0.3
+    chart: "konfigurator-0.0.3"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -89,8 +89,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.2
-    chart: "konfigurator-0.0.2"
+    version: 0.0.3
+    chart: "konfigurator-0.0.3"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -111,8 +111,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.2
-    chart: "konfigurator-0.0.2"
+    version: 0.0.3
+    chart: "konfigurator-0.0.3"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -154,8 +154,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.2
-    chart: "konfigurator-0.0.2"
+    version: 0.0.3
+    chart: "konfigurator-0.0.3"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
@@ -165,6 +165,6 @@ subjects:
   namespace: default
 roleRef:
   kind: ClusterRole
-  name: konfigurator-cluster-role
+  name: konfigurator-default-cluster-role
   apiGroup: rbac.authorization.k8s.io
 
