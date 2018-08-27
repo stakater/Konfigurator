@@ -191,9 +191,9 @@ Re-deploy the app after making these changes. That was the only thing needed to 
 
 ***Note:*** For every app that you want to parse logs of, including notifications, you need to add the annotation as explained above to its `Deployment`, `DaemonSet` or `StatefulSet`.
 
-## Templated config for fluentd
+## Config Template for fluentd
 
-Now that we have the app specific information bound to the app, lets create a templated config that fetches the values from these apps and populates a correct fluentd config. For this example, here's the complete templated configuration that caters multiline logs as well as slack notifications:
+Now that we have the app specific information bound to the app, lets create a config template that fetches the values from these apps and populates a correct fluentd config. For this example, here's the complete templated configuration that caters multiline logs as well as slack notifications:
 
 ```html
 # Read kubernetes logs
@@ -337,6 +337,28 @@ Now that we have the app specific information bound to the app, lets create a te
 
 ```
 
-There's a lot going on in this config. Let me explain some of the sections that are important here:
+There's a lot going on in this config:
 
-- 
+- First, all the pods having the annotation `fluentdConfiguration` are fetched
+- Then pods are filtered based on their owners so that there's only 1 pod left per app
+- The first loop creates concat filters for multiline support which use `expressionFirstLine` for line detection
+- The second loop creates parser filters which parse the inner logs based on regular expression provided in `expression` property
+- Then all the logs are duplicated and sent to 2 separate destinations
+- One is `stdout` and the other one is `slack`
+
+Okay so replace the `fluent.conf` template in `KonfiguratorTemplate` with the above one. Once done, re deploy fluentd and Konfigurator will update the generated config with the new one which will contain app specific filters and matches.
+
+Now if you have proper levels in logs, and the regexes and timestamp provided are correct, you will receive slack notifications on error logs. You can easily change the level on which the logs will be sent to slack by modifying the following block in template:
+
+```html
+# Filter ERROR level logs
+<filter **>
+    @type grep
+    <regexp>
+        key level
+        pattern (ERROR|error|Error|^E[0-9]{4})
+    </regexp>
+</filter>
+```
+
+You can find commonly used regexes and timestamps [here](https://github.com/stakater/RegexHub).
