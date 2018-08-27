@@ -1,4 +1,4 @@
-# Konfigurator Design
+# KonfiguratorTemplate
 
 The operator has a CRD named `KonfiguratorTemplate` that can define some of the following properties in the spec:
 
