@@ -1,4 +1,4 @@
-# Konfigurator
+# ![](assets/web/Konfigurator-round-100px.png) Konfigurator
 
 ## Problem
 
