@@ -7,8 +7,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.6
-    chart: "konfigurator-0.0.6"
+    version: 0.0.7
+    chart: "konfigurator-0.0.7"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:0.0.6"
+          image: "stakater/konfigurator:0.0.7"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -54,8 +54,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.6
-    chart: "konfigurator-0.0.6"
+    version: 0.0.7
+    chart: "konfigurator-0.0.7"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -68,8 +68,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.6
-    chart: "konfigurator-0.0.6"
+    version: 0.0.7
+    chart: "konfigurator-0.0.7"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -89,8 +89,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.6
-    chart: "konfigurator-0.0.6"
+    version: 0.0.7
+    chart: "konfigurator-0.0.7"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -111,8 +111,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.6
-    chart: "konfigurator-0.0.6"
+    version: 0.0.7
+    chart: "konfigurator-0.0.7"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -161,8 +161,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.6
-    chart: "konfigurator-0.0.6"
+    version: 0.0.7
+    chart: "konfigurator-0.0.7"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
