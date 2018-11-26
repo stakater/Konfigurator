@@ -3,18 +3,18 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-{{ include "labels.stakater" . | indent 4 }}
-{{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}
+{{ include "konfigurator.labels.stakater" . | indent 4 }}
+{{ include "konfigurator.labels.chart" . | indent 4 }}
+  name: {{ template "konfigurator.name" . }}
 
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   labels:
-{{ include "labels.stakater" . | indent 4 }}
-{{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}-role
+{{ include "konfigurator.labels.stakater" . | indent 4 }}
+{{ include "konfigurator.labels.chart" . | indent 4 }}
+  name: {{ template "konfigurator.name" . }}-role
 rules:
 - apiGroups:
   - konfigurator.stakater.com
@@ -28,16 +28,16 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   labels:
-{{ include "labels.stakater" . | indent 4 }}
-{{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}-role-binding
+{{ include "konfigurator.labels.stakater" . | indent 4 }}
+{{ include "konfigurator.labels.chart" . | indent 4 }}
+  name: {{ template "konfigurator.name" . }}-role-binding
 subjects:
 - kind: ServiceAccount
-  name: {{ template "name" . }}
+  name: {{ template "konfigurator.name" . }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role
-  name: {{ template "name" . }}-role
+  name: {{ template "konfigurator.name" . }}-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -45,9 +45,9 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   labels:
-{{ include "labels.stakater" . | indent 4 }}
-{{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}-{{ .Release.Namespace }}-cluster-role
+{{ include "konfigurator.labels.stakater" . | indent 4 }}
+{{ include "konfigurator.labels.chart" . | indent 4 }}
+  name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role
 rules:
 - apiGroups:
   - ""
@@ -90,14 +90,14 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   labels:
-{{ include "labels.stakater" . | indent 4 }}
-{{ include "labels.chart" . | indent 4 }}
-  name: {{ template "name" . }}-{{ .Release.Namespace }}-cluster-role-binding
+{{ include "konfigurator.labels.stakater" . | indent 4 }}
+{{ include "konfigurator.labels.chart" . | indent 4 }}
+  name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role-binding
 subjects:
 - kind: ServiceAccount
-  name: {{ template "name" . }}
+  name: {{ template "konfigurator.name" . }}
   namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: {{ template "name" . }}-{{ .Release.Namespace }}-cluster-role
+  name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role
   apiGroup: rbac.authorization.k8s.io

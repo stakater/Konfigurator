@@ -2,7 +2,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "name" -}}
+{{- define "konfigurator.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" | lower -}}
 {{- end -}}
 
@@ -10,23 +10,23 @@ Expand the name of the chart.
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "fullname" -}}
+{{- define "konfigurator.fullname" -}}
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "labels.selector" -}}
-app: {{ template "name" . }}
+{{- define "konfigurator.labels.selector" -}}
+app: {{ template "konfigurator.name" . }}
 group: {{ .Values.konfigurator.labels.group }}
 provider: {{ .Values.konfigurator.labels.provider }}
 {{- end -}}
 
-{{- define "labels.stakater" -}}
-{{ template "labels.selector" . }}
+{{- define "konfigurator.labels.stakater" -}}
+{{ template "konfigurator.labels.selector" . }}
 version: {{ .Values.konfigurator.labels.version }}
 {{- end -}}
 
-{{- define "labels.chart" -}}
+{{- define "konfigurator.labels.chart" -}}
 chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 release: {{ .Release.Name | quote }}
 heritage: {{ .Release.Service | quote }}
