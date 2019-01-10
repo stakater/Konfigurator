@@ -36,10 +36,7 @@ func main() {
 }
 
 func watchKonfiguratorTemplate() {
-	namespace, err := getWatchNamespace()
-	if err != nil {
-		logrus.Fatalf("Failed to get watch namespace: %v", err)
-	}
+	namespace := getWatchNamespace()
 
 	watch("konfigurator.stakater.com/v1alpha1", "KonfiguratorTemplate", namespace, 15)
 }
