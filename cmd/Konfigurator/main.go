@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"os"
 	"runtime"
 
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
-	"github.com/operator-framework/operator-sdk/pkg/util/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	kContext "github.com/stakater/Konfigurator/pkg/context"
 	stub "github.com/stakater/Konfigurator/pkg/stub"
@@ -36,12 +36,17 @@ func main() {
 }
 
 func watchKonfiguratorTemplate() {
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		logrus.Fatalf("Failed to get watch namespace: %v", err)
-	}
+	namespace := getWatchNamespace()
 
 	watch("konfigurator.stakater.com/v1alpha1", "KonfiguratorTemplate", namespace, 15)
+}
+
+func getWatchNamespace() string {
+	namespace := os.Getenv("WATCH_NAMESPACE")
+	if namespace == "" {
+		logrus.Infof("WATCH_NAMESPACE is empty")
+	}
+	return namespace
 }
 
 func watchPods() {

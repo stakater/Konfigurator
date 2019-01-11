@@ -84,6 +84,12 @@ rules:
   - secrets
   verbs:
   - "*"
+- apiGroups:
+  - "*"
+  resources:
+  - konfiguratortemplates
+  verbs:
+  - "*"
 ---
 
 kind: ClusterRoleBinding

@@ -22,18 +22,12 @@ A kubernetes operator that can dynamically generate app configuration when kuber
 
 ## Deploying to Kubernetes
 
-Deploying Konfigurator is a 2 step procedure:
+Deploying Konfigurator requires:
 
-1. Deploy CRD to your cluster
-2. Deploy Konfigurator operator
+1. Deploying CRD to your cluster
+2. Deploying Konfigurator operator
 
-So first apply the CRD manifest by running the following command:
-
-```bash
-kubectl apply -f https://raw.githubusercontent.com/stakater/Konfigurator/master/deploy/crd.yaml
-```
-
-Once the CRD is installed, you can deploy the operator on your kubernetes cluster via any of the following methods.
+You can deploy the CRD and operator on your kubernetes cluster via any of the following methods.
 
 ### Vanilla Manifests
 
@@ -43,7 +37,12 @@ You can apply vanilla manifests by running the following command
 kubectl apply -f https://raw.githubusercontent.com/stakater/Konfigurator/master/deployments/kubernetes/konfigurator.yaml
 ```
 
-By default Konfigurator gets deployed in the default namespace and manages its custom resources in that namespace.
+Konfigurator by default looks for **KonfiguratorTemplate** only in the namespace where it is deployed, but it can be managed to work globally, you would have to change the `WATCH_NAMESPACE` environment variable to "" in the above manifest. e.g. change `WWATCH_NAMESPACE` section to:
+
+```yaml
+            - name: WATCH_NAMESPACE
+              value: ""
+```
 
 ### Helm Charts
 
@@ -58,6 +57,14 @@ helm install stakater/konfigurator
 ```
 
 Once Konfigurator is running, you can start creating resources supported by it. For details about its custom resources, look [here](https://github.com/stakater/Konfigurator/tree/master/docs/konfigurator-template.md).
+
+To make Konfigurator work globally, you would have to change the `WATCH_NAMESPACE` environment variable to "" in values.yaml. e.g. change `WWATCH_NAMESPACE` section to:
+
+```yaml
+  env:
+  - name: WATCH_NAMESPACE
+    value: ""
+```
 
 ## Help
 

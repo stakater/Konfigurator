@@ -25,10 +25,7 @@ spec:
           command:
           - Konfigurator
           env:
-            - name: WATCH_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "{{ template "konfigurator.name" . }}"
+{{ toYaml .Values.konfigurator.env | indent 12 }}
       serviceAccountName: {{ template "konfigurator.name" . }}
