@@ -12,3 +12,8 @@ konfigurator:
     name: stakater/konfigurator
     tag: "0.0.11"
     pullPolicy: IfNotPresent
+  env:
+  - name: WATCH_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
