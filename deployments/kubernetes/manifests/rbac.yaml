@@ -8,8 +8,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.11
-    chart: "konfigurator-0.0.11"
+    version: 0.0.12
+    chart: "konfigurator-0.0.12"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -22,8 +22,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.11
-    chart: "konfigurator-0.0.11"
+    version: 0.0.12
+    chart: "konfigurator-0.0.12"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -43,8 +43,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.11
-    chart: "konfigurator-0.0.11"
+    version: 0.0.12
+    chart: "konfigurator-0.0.12"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -65,8 +65,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.11
-    chart: "konfigurator-0.0.11"
+    version: 0.0.12
+    chart: "konfigurator-0.0.12"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -106,6 +106,12 @@ rules:
   - secrets
   verbs:
   - "*"
+- apiGroups:
+  - "*"
+  resources:
+  - konfiguratortemplates
+  verbs:
+  - "*"
 ---
 
 kind: ClusterRoleBinding
@@ -115,8 +121,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.11
-    chart: "konfigurator-0.0.11"
+    version: 0.0.12
+    chart: "konfigurator-0.0.12"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding

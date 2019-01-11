@@ -334,31 +334,6 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:12b10543fc53e0537739f08614a650343bf1118be7ef9a6e8a2ee93d7d395dd3"
-  name = "github.com/stakater/Konfigurator"
-  packages = [
-    "pkg/apis/konfigurator/v1alpha1",
-    "pkg/context",
-    "pkg/controllers/ingress",
-    "pkg/controllers/konfiguratortemplate",
-    "pkg/controllers/pod",
-    "pkg/controllers/service",
-    "pkg/kube",
-    "pkg/kube/lists/containers",
-    "pkg/kube/lists/volumes",
-    "pkg/kube/mounts",
-    "pkg/kube/objects/volume",
-    "pkg/kube/reflect",
-    "pkg/kube/testutil",
-    "pkg/stub",
-    "pkg/template",
-    "pkg/template/funcs",
-  ]
-  pruneopts = ""
-  revision = "ff5e4991e8b04bad6939496ba20599984f7b7fd7"
-  version = "0.0.10"
-
-[[projects]]
   branch = "master"
   digest = "1:cae234a803b78380e4d769db6036b9fcc8c08ed4ff862571ffc1a958edc1f629"
   name = "golang.org/x/crypto"
@@ -650,22 +625,6 @@
     "github.com/operator-framework/operator-sdk/pkg/util/k8sutil",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/sirupsen/logrus",
-    "github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1",
-    "github.com/stakater/Konfigurator/pkg/context",
-    "github.com/stakater/Konfigurator/pkg/controllers/ingress",
-    "github.com/stakater/Konfigurator/pkg/controllers/konfiguratortemplate",
-    "github.com/stakater/Konfigurator/pkg/controllers/pod",
-    "github.com/stakater/Konfigurator/pkg/controllers/service",
-    "github.com/stakater/Konfigurator/pkg/kube",
-    "github.com/stakater/Konfigurator/pkg/kube/lists/containers",
-    "github.com/stakater/Konfigurator/pkg/kube/lists/volumes",
-    "github.com/stakater/Konfigurator/pkg/kube/mounts",
-    "github.com/stakater/Konfigurator/pkg/kube/objects/volume",
-    "github.com/stakater/Konfigurator/pkg/kube/reflect",
-    "github.com/stakater/Konfigurator/pkg/kube/testutil",
-    "github.com/stakater/Konfigurator/pkg/stub",
-    "github.com/stakater/Konfigurator/pkg/template",
-    "github.com/stakater/Konfigurator/pkg/template/funcs",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",

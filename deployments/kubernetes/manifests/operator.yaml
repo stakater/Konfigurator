@@ -7,8 +7,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.11
-    chart: "konfigurator-0.0.11"
+    version: 0.0.12
+    chart: "konfigurator-0.0.12"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:0.0.11"
+          image: "stakater/konfigurator:0.0.12"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -36,11 +36,12 @@ spec:
           command:
           - Konfigurator
           env:
+            - name: OPERATOR_NAME
+              value: "konfigurator"
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: OPERATOR_NAME
-              value: "konfigurator"
+            
       serviceAccountName: konfigurator
 
