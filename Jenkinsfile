@@ -7,5 +7,5 @@ goBuildAndRelease {
     toolsImage = "stakater/pipeline-tools:1.13.2"
     chartRepositoryURL = 'https://chartmuseum.release.stakater.com'
     publicChartRepositoryURL = 'https://stakater.github.io/stakater-charts'
-    publicChartGitURL = 'git@github.com/stakater/stakater-charts.git'
+    publicChartGitURL = 'git@github.com:stakater/stakater-charts.git'
 }
