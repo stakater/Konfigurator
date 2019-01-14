@@ -7,10 +7,10 @@ konfigurator:
   labels:
     provider: stakater
     group: com.stakater.platform
-    version: 0.0.15
+    version: 0.0.16
   image:
     name: stakater/konfigurator
-    tag: "0.0.15"
+    tag: "0.0.16"
     pullPolicy: IfNotPresent
   env:
   - name: WATCH_NAMESPACE
