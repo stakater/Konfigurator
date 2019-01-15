@@ -7,8 +7,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
+    version: 0.0.16
+    chart: "konfigurator-0.0.16"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:0.0.15"
+          image: "stakater/konfigurator:0.0.16"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -55,8 +55,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
+    version: 0.0.16
+    chart: "konfigurator-0.0.16"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -69,8 +69,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
+    version: 0.0.16
+    chart: "konfigurator-0.0.16"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -90,8 +90,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
+    version: 0.0.16
+    chart: "konfigurator-0.0.16"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -112,8 +112,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
+    version: 0.0.16
+    chart: "konfigurator-0.0.16"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -168,8 +168,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
+    version: 0.0.16
+    chart: "konfigurator-0.0.16"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
@@ -184,17 +184,4 @@ roleRef:
 
 ---
 # Source: konfigurator/templates/crd.yaml
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: konfiguratortemplates.konfigurator.stakater.com
-spec:
-  group: konfigurator.stakater.com
-  names:
-    kind: KonfiguratorTemplate
-    listKind: KonfiguratorTemplateList
-    plural: konfiguratortemplates
-    singular: konfiguratortemplate
-  scope: Namespaced
-  version: v1alpha1
 
