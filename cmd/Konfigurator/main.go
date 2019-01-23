@@ -44,7 +44,7 @@ func watchKonfiguratorTemplate() {
 func getWatchNamespace() string {
 	namespace := os.Getenv("WATCH_NAMESPACE")
 	if namespace == "" {
-		logrus.Infof("WATCH_NAMESPACE is empty")
+		logrus.Infof("WATCH_NAMESPACE is empty, so looking in all namespaces")
 	}
 	return namespace
 }
