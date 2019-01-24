@@ -7,8 +7,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.18
-    chart: "konfigurator-v0.0.18"
+    version: v0.0.19
+    chart: "konfigurator-v0.0.19"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:v0.0.18"
+          image: "stakater/konfigurator:v0.0.19"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -55,8 +55,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.18
-    chart: "konfigurator-v0.0.18"
+    version: v0.0.19
+    chart: "konfigurator-v0.0.19"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator
@@ -69,8 +69,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.18
-    chart: "konfigurator-v0.0.18"
+    version: v0.0.19
+    chart: "konfigurator-v0.0.19"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role
@@ -90,8 +90,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.18
-    chart: "konfigurator-v0.0.18"
+    version: v0.0.19
+    chart: "konfigurator-v0.0.19"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -112,8 +112,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.18
-    chart: "konfigurator-v0.0.18"
+    version: v0.0.19
+    chart: "konfigurator-v0.0.19"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -168,8 +168,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.18
-    chart: "konfigurator-v0.0.18"
+    version: v0.0.19
+    chart: "konfigurator-v0.0.19"
     release: "RELEASE-NAME"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
