@@ -15,6 +15,7 @@ const (
 // GetDeployment provides deployment for testing
 func GetDeployment(deploymentName string) *appsv1.Deployment {
 	replicaset := int32(1)
+	uid := int64(1000)
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       string(v1alpha1.AppKindDeployment),
@@ -35,6 +36,9 @@ func GetDeployment(deploymentName string) *appsv1.Deployment {
 					Labels: map[string]string{"secondLabel": "temp"},
 				},
 				Spec: v1.PodSpec{
+					SecurityContext: &v1.PodSecurityContext{
+						RunAsUser: &uid,
+					},
 					Containers: []v1.Container{
 						{
 							Image: "tutum/hello-world",

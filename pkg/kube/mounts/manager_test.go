@@ -1,6 +1,7 @@
 package mounts
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -8,10 +9,15 @@ import (
 	"github.com/stakater/Konfigurator/pkg/kube/lists/containers"
 	"github.com/stakater/Konfigurator/pkg/kube/lists/volumes"
 	"github.com/stakater/Konfigurator/pkg/kube/testutil"
+
+	"k8s.io/api/apps/v1"
 )
 
 func TestMountVolumes(t *testing.T) {
 	mountManager := getNewManager()
+
+	origPodSecurityContext := mountManager.Target.(*v1.Deployment).Spec.Template.Spec.SecurityContext
+
 	err := mountManager.MountVolumes(testutil.GetVolumeMounts())
 	if err != nil {
 		t.Errorf("Volume mounting failed with error: %v", err)
@@ -28,6 +34,11 @@ func TestMountVolumes(t *testing.T) {
 		t.Errorf("Volume '%s' mounting failed in deployment", mountManager.resourceToMount)
 	}
 
+	newPodSecurityContext := mountManager.Target.(*v1.Deployment).Spec.Template.Spec.SecurityContext
+
+	if !reflect.DeepEqual(origPodSecurityContext, newPodSecurityContext) {
+		t.Errorf("Security Context lost")
+	}
 }
 
 func TestUnMountVolumes(t *testing.T) {
