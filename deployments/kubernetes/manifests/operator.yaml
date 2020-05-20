@@ -7,9 +7,9 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
 spec:
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:v0.0.20"
+          image: "stakater/konfigurator:v0.0.21"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
