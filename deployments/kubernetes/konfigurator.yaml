@@ -1,15 +1,18 @@
 ---
+# Source: konfigurator/templates/crd.yaml
+
+---
 # Source: konfigurator/templates/operator.yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
 spec:
@@ -28,7 +31,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:v0.0.20"
+          image: "stakater/konfigurator:v0.0.21"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -55,23 +58,23 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
 
 ---
 kind: Role
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role
 rules:
@@ -84,15 +87,15 @@ rules:
 
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role-binding
 subjects:
@@ -106,15 +109,15 @@ roleRef:
 
 ---
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
 rules:
@@ -162,15 +165,15 @@ rules:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
 subjects:
@@ -181,7 +184,4 @@ roleRef:
   kind: ClusterRole
   name: konfigurator-default-cluster-role
   apiGroup: rbac.authorization.k8s.io
-
----
-# Source: konfigurator/templates/crd.yaml
 
