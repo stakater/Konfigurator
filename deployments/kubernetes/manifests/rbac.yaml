@@ -8,23 +8,23 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
 
 ---
 kind: Role
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role
 rules:
@@ -37,15 +37,15 @@ rules:
 
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role-binding
 subjects:
@@ -59,15 +59,15 @@ roleRef:
 
 ---
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
 rules:
@@ -115,15 +115,15 @@ rules:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.20
-    chart: "konfigurator-v0.0.20"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
 subjects:
