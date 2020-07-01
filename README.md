@@ -37,7 +37,7 @@ You can apply vanilla manifests by running the following command
 kubectl apply -f https://raw.githubusercontent.com/stakater/Konfigurator/master/deployments/kubernetes/konfigurator.yaml
 ```
 
-Konfigurator by default looks for **KonfiguratorTemplate** only in the namespace where it is deployed, but it can be managed to work globally, you would have to change the `WATCH_NAMESPACE` environment variable to "" in the above manifest. e.g. change `WWATCH_NAMESPACE` section to:
+Konfigurator by default looks for **KonfiguratorTemplate** only in the namespace where it is deployed, but it can be managed to work globally, you would have to change the `WATCH_NAMESPACE` environment variable to "" in the above manifest. e.g. change `WATCH_NAMESPACE` section to:
 
 ```yaml
             - name: WATCH_NAMESPACE

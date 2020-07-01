@@ -1,15 +1,15 @@
 ---
 # Source: konfigurator/templates/operator.yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: 0.0.15
-    chart: "konfigurator-0.0.15"
-    release: "RELEASE-NAME"
+    version: v0.0.21
+    chart: "konfigurator-v0.0.21"
+    release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
 spec:
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:0.0.15"
+          image: "stakater/konfigurator:v0.0.21"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
