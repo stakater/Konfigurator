@@ -8,8 +8,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
@@ -22,8 +22,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role
@@ -43,8 +43,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -65,8 +65,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -114,8 +114,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding

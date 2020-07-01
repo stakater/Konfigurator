@@ -10,8 +10,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: konfigurator
-          image: "stakater/konfigurator:v0.0.21"
+          image: "stakater/konfigurator:v0.0.22"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 60000
@@ -58,8 +58,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator
@@ -72,8 +72,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role
@@ -93,8 +93,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-role-binding
@@ -115,8 +115,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role
@@ -132,17 +132,10 @@ rules:
   - get
   - watch
 - apiGroups:
-  - "extensions"
-  resources:
-  - daemonsets
-  verbs:
-  - get
-  - update
-  - patch
-- apiGroups:
   - apps
   resources:
   - deployments
+  - daemonsets
   - statefulsets
   verbs:
   - get
@@ -171,8 +164,8 @@ metadata:
     app: konfigurator
     group: com.stakater.platform
     provider: stakater
-    version: v0.0.21
-    chart: "konfigurator-v0.0.21"
+    version: v0.0.22
+    chart: "konfigurator-v0.0.22"
     release: "konfigurator"
     heritage: "Tiller"
   name: konfigurator-default-cluster-role-binding
