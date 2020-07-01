@@ -16,7 +16,7 @@ var appKindToObjectMap = map[v1alpha1.AppKind]metav1.Object{
 	v1alpha1.AppKindDaemonSet: &v1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       string(v1alpha1.AppKindDaemonSet),
-			APIVersion: "extensions/v1beta1",
+			APIVersion: "apps/v1",
 		},
 	},
 	v1alpha1.AppKindStatefulSet: &v1.StatefulSet{
