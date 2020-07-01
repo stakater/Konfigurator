@@ -11,7 +11,7 @@ import (
 	"github.com/stakater/Konfigurator/pkg/controllers/konfiguratortemplate"
 	"github.com/stakater/Konfigurator/pkg/controllers/pod"
 	"github.com/stakater/Konfigurator/pkg/controllers/service"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 )
 
@@ -81,7 +81,7 @@ func (h *Handler) HandleKonfiguratorTemplate(controller *konfiguratortemplate.Co
 			return err
 		}
 
-		logrus.Info("Deleted KonfiguratorTemplate: %v", controller.Resource.Name)
+		logrus.Infof("Deleted KonfiguratorTemplate: %v", controller.Resource.Name)
 
 		return nil
 	}
