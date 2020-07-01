@@ -70,7 +70,7 @@ func GetDaemonSet(daemonsetName string) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       string(v1alpha1.AppKindDaemonSet),
-			APIVersion: "apps/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      daemonsetName,
