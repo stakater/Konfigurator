@@ -18,7 +18,7 @@ func GetDeployment(deploymentName string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       string(v1alpha1.AppKindDeployment),
-			APIVersion: "apps/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -70,7 +70,7 @@ func GetDaemonSet(daemonsetName string) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       string(v1alpha1.AppKindDaemonSet),
-			APIVersion: "apps/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      daemonsetName,
@@ -121,7 +121,7 @@ func GetStatefulSet(statefulsetName string) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       string(v1alpha1.AppKindStatefulSet),
-			APIVersion: "apps/v1beta1",
+			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      statefulsetName,
