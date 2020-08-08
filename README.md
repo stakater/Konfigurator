@@ -75,8 +75,8 @@ File a GitHub [issue](https://github.com/stakater/Konfigurator/issues), or send 
 
 Join and talk to us on Slack for discussing Konfigurator
 
-[![Join Slack](https://stakater.github.io/README/stakater-join-slack-btn.png)](https://stakater-slack.herokuapp.com/)
-[![Chat](https://stakater.github.io/README/stakater-chat-btn.png)](https://stakater.slack.com/messages/CC8R7L8KG/)
+[![Join Slack](https://stakater.github.io/README/stakater-join-slack-btn.png)](https://slack.stakater.com/)
+[![Chat](https://stakater.github.io/README/stakater-chat-btn.png)](https://stakater-community.slack.com/messages/CC8R7L8KG)
 
 ## Contributing
 
