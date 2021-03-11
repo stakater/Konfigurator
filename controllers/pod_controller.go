@@ -1,0 +1,101 @@
+/*
+Copyright 2021.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controllers
+
+import (
+	"context"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
+	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
+	corev1 "k8s.io/api/core/v1"
+	kContext "github.com/stakater/Konfigurator/pkg/context"
+)
+
+// PodReconciler reconciles a KonfiguratorTemplate object
+type PodReconciler struct {
+	Log    logr.Logger
+	Context  *kContext.Context
+}
+
+// +kubebuilder:rbac:groups=v1,resources=pods,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=v1,resources=pods/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=v1,resources=pods/finalizers,verbs=update
+
+func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("pod", req.NamespacedName)
+
+	// your logic here
+
+	log := r.Log.WithValues("template", req.NamespacedName)
+	log.Info("Reconciling template: " + req.Name)
+	// Fetch the pod instance
+	instance := &corev1.Pod{}
+
+	err := r.Get(ctx, req.NamespacedName, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return reconcilerUtil.RequeueWithError(err)
+	}
+
+	// Resource is marked for deletion
+	if instance.DeletionTimestamp != nil {
+		if err := r.RemoveFromContext(instance.name, instance.Namespace); err != nil {
+			return reconcilerUtil.RequeueWithError(err)
+		}
+	}
+
+	if err := r.AddToContext(instance); err != nil {
+		return reconcilerUtil.RequeueWithError(err)
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *PodReconciler) RemoveFromContext(name, namespace string) error {
+	for index, pod := range r.Context.Pods {
+		if pod.Name == name && pod.Namespace == namespace {
+			// Remove the resource
+			r.Context.Pods = append(r.Context.Pods[:index], r.Context.Pods[index+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("Could not find pod resource %v in current context", name)
+}
+
+func (r *PodReconciler) AddToContext(instance *corev1.Pod) error {
+	for index, pod := range r.Context.Pods {
+		if pod.Name == instance.Name && pod.Namespace == instance.Namespace {
+			// Update the resource
+			r.Context.Pods[index] = *instance
+			return nil
+		}
+	}
+	r.Context.Pods = append(r.Context.Pods, *return.Resource)
+	return nil
+}
+func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&corev1.Pod{}).
+		Complete(r)
+}

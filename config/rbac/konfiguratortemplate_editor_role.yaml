@@ -1,0 +1,24 @@
+# permissions for end users to edit konfiguratortemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: konfiguratortemplate-editor-role
+rules:
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - konfiguratortemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - konfiguratortemplates/status
+  verbs:
+  - get
