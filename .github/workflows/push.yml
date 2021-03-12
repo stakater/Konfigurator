@@ -3,7 +3,7 @@ name: Push
 on:
   push:
     branches:
-      - main
+      - master
 
 env:
   DOCKER_FILE_PATH: Dockerfile
