@@ -49,6 +49,10 @@ test: generate fmt vet manifests
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+# Unit-test
+unit-test:
+	go test ./...
+
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go
@@ -134,3 +138,11 @@ bundle: manifests kustomize
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+bump-chart:
+	sed -i "s/^version:.*/version:  $(VERSION)/" charts/konfigurator/Chart.yaml
+	sed -i "s/^appVersion:.*/appVersion:  $(VERSION)/" charts/konfigurator/Chart.yaml
+	sed -i "s/tag:.*/tag:  v$(VERSION)/" charts/konfigurator/values.yaml
+
+helm-lint:
+	if [ -d charts ]; then helm lint charts/konfigurator; fi

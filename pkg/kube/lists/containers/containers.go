@@ -1,7 +1,7 @@
 package containers
 
 import (
-	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
+	"github.com/stakater/konfigurator/api/v1alpha1"
 	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 

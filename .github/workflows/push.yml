@@ -1,0 +1,140 @@
+name: Push
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DOCKER_FILE_PATH: Dockerfile
+  GOLANG_VERSION: 1.15.2
+  OPERATOR_SDK_VERSION: "1.2.0"
+  KUSTOMIZE_VERSION: "3.5.4"
+
+jobs:
+  build:
+    name: Build
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+        fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+
+    - name: Set up Go
+      id: go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ env.GOLANG_VERSION }}
+
+    - name: Lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.26.0
+        golangci-lint run --timeout=10m ./...
+
+    - name: Generate Tag
+      id: generate_tag
+      uses: anothrNick/github-tag-action@1.26.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        WITH_V: true
+        DEFAULT_BUMP: patch
+        RELEASE_BRANCHES: main
+        DRY_RUN: true
+    
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ${{ secrets.STAKATER_NEXUS_REGISTRY }}
+        username: ${{ secrets.STAKATER_NEXUS_USERNAME }}
+        password: ${{ secrets.STAKATER_NEXUS_PASSWORD }}
+
+    - name: Generate image repository path
+      run: |
+        echo IMAGE_REPOSITORY=$(echo ${{ secrets.STAKATER_NEXUS_REGISTRY }}/${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
+
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ${{ env.DOCKER_FILE_PATH  }}
+        pull: true
+        push: true
+        build-args: GIT_ACCESS_TOKEN=${{ secrets.STAKATER_GITHUB_TOKEN }}
+        cache-to: type=inline
+        tags: |
+          ${{ env.IMAGE_REPOSITORY }}:${{ steps.generate_tag.outputs.new_tag }}
+        labels: |
+          org.opencontainers.image.source=${{ github.event.repository.clone_url }}
+          org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+          org.opencontainers.image.revision=${{ github.sha }}
+
+    # Generate tag for operator without "v"
+    - name: Generate Operator Tag
+      id: generate_operator_tag
+      uses: anothrNick/github-tag-action@1.26.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        WITH_V: false
+        DEFAULT_BUMP: patch
+        RELEASE_BRANCHES: main
+        DRY_RUN: true
+
+    # Update chart tag to the latest semver tag
+    - name: Update Chart Version
+      env:
+        VERSION: ${{ steps.generate_operator_tag.outputs.new_tag }}
+      run: make bump-chart
+    
+    - name: Update Chart CRDs
+      run: make manifests
+      
+    # Setting up helm binary
+    - uses: azure/setup-helm@v1
+
+    # Publish helm chart to nexus
+    - name: Publish Helm chart
+      run: |
+        helm package ./charts/konfigurator --destination ./packaged-chart
+        curl -u ${{ secrets.STAKATER_NEXUS_HELM_USERNAME }}:${{ secrets.STAKATER_NEXUS_HELM_PASSWORD }} ${{ secrets.STAKATER_NEXUS_HELM_REGISTRY }} --upload-file ./packaged-chart/*.tgz
+        rm -rf ./packaged-chart
+
+    # Commit back changes
+    - name: Commit files
+      run: |
+        git config --local user.email "github-root@stakater.com"
+        git config --local user.name "stakater-github-root"
+        git status 
+        git add .
+        git commit -m "[skip-ci] Update artifacts" -a
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        branch: main
+    - name: Push Latest Tag
+      uses: anothrNick/github-tag-action@1.26.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        WITH_V: true
+        RELEASE_BRANCHES: main
+        DEFAULT_BUMP: patch
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      if: always() # Pick up events even if the job fails or is canceled.
+      with:
+        status: ${{ job.status }}
+        fields: repo,author,action,eventName,ref,workflow
+      env:
+        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        SLACK_WEBHOOK_URL: ${{ secrets.STAKATER_DELIVERY_SLACK_WEBHOOK }}

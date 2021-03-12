@@ -18,28 +18,40 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"github.com/stakater/konfigurator/pkg/kube"
+	"github.com/stakater/konfigurator/pkg/template"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"strings"
 
 	"github.com/go-logr/logr"
+	k8sutils "github.com/stakater/konfigurator/pkg/utils/k8s"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/stakater/Konfigurator/pkg/kube/mounts"
+	v1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
+	xContext "github.com/stakater/konfigurator/pkg/context"
+	"github.com/stakater/konfigurator/pkg/kube/mounts"
 	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
-	v1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 )
 
 const (
-	TemplateFinalizer  string = "konfigurator.stakater.com/konfiguratortemplate"
+	TemplateFinalizer     string = "konfigurator.stakater.com/konfiguratortemplate"
+	GeneratedByAnnotation        = "konfigurator.stakater.com/generated-by"
 )
+
 // KonfiguratorTemplateReconciler reconciles a KonfiguratorTemplate object
 type KonfiguratorTemplateReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log               logr.Logger
+	Scheme            *runtime.Scheme
 	RenderedTemplates map[string]string
-	Context *kContext.Context
+	XContext          *xContext.Context
+	KContext          context.Context
 }
 
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates,verbs=get;list;watch;create;update;patch;delete
@@ -57,7 +69,7 @@ type KonfiguratorTemplateReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
-
+	r.KContext = ctx
 	// your logic here
 
 	log := r.Log.WithValues("template", req.NamespacedName)
@@ -100,7 +112,7 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		}
 		return ctrl.Result{}, nil
 	}
-	return handleCreate(ctx, req, instance)
+	return r.handleCreate(ctx, req, instance)
 }
 
 func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
@@ -113,7 +125,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	}
 
 	log.Info("Creating resources...")
-	if err := r.CreateResources(instance.Spec.RenderTarget); err != nil {
+	if err := r.CreateResources(instance.Spec.App.Name, instance.Namespace, instance.Spec.RenderTarget); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
@@ -140,11 +152,10 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
-	log.Infof("Deleted KonfiguratorTemplate: %v", instance.Name)
+	log.Info("Deleted KonfiguratorTemplate: %v", instance.Name)
 
 	return ctrl.Result{}, nil
 }
-
 
 func (r *KonfiguratorTemplateReconciler) getGeneratedResourceName(name string) string {
 	return strings.ToLower("konfigurator-" + name + "-rendered")
@@ -165,29 +176,16 @@ func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, te
 	return nil
 }
 
-func (r *KonfiguratorTemplateReconciler) CreateResources(renderTarget string) error {
+func (r *KonfiguratorTemplateReconciler) CreateResources(name, namespace string, renderTarget v1alpha1.RenderTarget) error {
 	// Generate resource name
-	resourceName := r.getGeneratedResourceName(instance.Spec.App.Name)
-
-	var resourceToCreate metav1.Object
+	resourceName := r.getGeneratedResourceName(name)
 
 	// Check for render target and create resource
 	if renderTarget == v1alpha1.RenderTargetConfigMap {
-		resourceToCreate = r.createConfigMap(resourceName)
+		return r.createConfigMap(resourceName, namespace)
 	} else {
-		resourceToCreate = r.createSecret(resourceName)
+		return r.createSecret(resourceName, namespace)
 	}
-
-	// Try to create the resource
-	if err := sdk.Create(resourceToCreate.(runtime.Object)); err != nil && !errors.IsAlreadyExists(err) {
-		return err
-	}
-	// Update the resource if it already exists
-	if err := sdk.Update(resourceToCreate.(runtime.Object)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *KonfiguratorTemplateReconciler) MountVolumes(instance *v1alpha1.KonfiguratorTemplate) error {
@@ -217,7 +215,7 @@ func (r *KonfiguratorTemplateReconciler) UnmountVolumes(instance *v1alpha1.Konfi
 	)
 }
 
-func (r *KonfiguratorTemplateReconciler) DeleteResources(renderTarget, name, namespace string) error {
+func (r *KonfiguratorTemplateReconciler) DeleteResources(renderTarget v1alpha1.RenderTarget, name, namespace string) error {
 	switch renderTarget {
 	case v1alpha1.RenderTargetConfigMap:
 		return r.deleteConfigMap(name, namespace)
@@ -233,72 +231,91 @@ func (r *KonfiguratorTemplateReconciler) handleVolumes(instance *v1alpha1.Konfig
 		return err
 	}
 
-	err = handleVolumesFunc(mountManager)
-	if err != nil {
-		return err
-	}
+	_, err = k8sutils.CreateOrUpdate(r.KContext, r.Client, mountManager.Target.(client.Object), func() error {
 
-	return sdk.Update(mountManager.Target.(runtime.Object))
+		return handleVolumesFunc(mountManager)
+
+	})
+	return err
 
 }
 
-func (r *KonfiguratorTemplateReconciler) createMountManager(app v1alpha1.App, namespace, renderTarget string) (*mounts.MountManager, error) {
-	app, err := r.fetchAppObject(app, namespace)
+func (r *KonfiguratorTemplateReconciler) createMountManager(app v1alpha1.App, namespace string, renderTarget v1alpha1.RenderTarget) (*mounts.MountManager, error) {
+	appObj, err := r.fetchAppObject(app, namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	// Mount volumes to the specified resource
 	return mounts.NewManager(
-		r.getGeneratedResourceName(instance.Spec.App.Name),
+		r.getGeneratedResourceName(app.Name),
 		renderTarget,
-		app), nil
+		appObj), nil
 }
 
 func (r *KonfiguratorTemplateReconciler) fetchAppObject(app v1alpha1.App, namespace string) (metav1.Object, error) {
-	app := kube.CreateObjectFromApp(app, namespace)
+	appObj := kube.CreateObjectFromApp(app, namespace)
 
 	// Check if the app exists
-	err := sdk.Get(app.(runtime.Object))
-	if err != nil {
+	if err := r.Get(
+		r.KContext,
+		types.NamespacedName{Name: app.Name, Namespace: namespace},
+		appObj.(client.Object),
+	); err != nil {
 		return nil, fmt.Errorf("Failed to get the desired app: %v", err)
 	}
 
-	return app, nil
+	return appObj, nil
 }
 
-func (r *KonfiguratorTemplateReconciler) createConfigMap(name, namespace string) metav1.Object {
+func (r *KonfiguratorTemplateReconciler) createConfigMap(name, namespace string) error {
 	configmap := kube.CreateConfigMap(name)
-	r.prepareResource(namespace, configmap)
 
-	// Add rendered data to resource
-	configmap.Data = r.RenderedTemplates
+	if _, err := k8sutils.CreateOrUpdate(r.KContext, r.Client, configmap, func() error {
 
-	return configmap
+		r.prepareResource(namespace, configmap)
+
+		// Add rendered data to resource
+		configmap.Data = r.RenderedTemplates
+		//Note(Jose): No need to set owner reference because delete manually
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (r *KonfiguratorTemplateReconciler) createSecret(name, namespace string) metav1.Object {
+func (r *KonfiguratorTemplateReconciler) createSecret(name, namespace string) error {
 	secret := kube.CreateSecret(name)
-	r.prepareResource(namespace, secret)
 
-	// Add rendered data to resource
-	secret.Data = kube.ToSecretData(r.RenderedTemplates)
+	if _, err := k8sutils.CreateOrUpdate(r.KContext, r.Client, secret, func() error {
 
-	return secret
+		r.prepareResource(namespace, secret)
+
+		// Add rendered data to resource
+		secret.Data = kube.ToSecretData(r.RenderedTemplates)
+		//Note(Jose): No need to set owner reference because delete manually
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *KonfiguratorTemplateReconciler) deleteConfigMap(name, namespace string) error {
 	configmap := kube.CreateConfigMap(r.getGeneratedResourceName(name))
 	r.prepareResource(namespace, configmap)
 
-	return sdk.Delete(configmap)
+	return r.Delete(r.KContext, configmap)
 }
 
 func (r *KonfiguratorTemplateReconciler) deleteSecret(name, namespace string) error {
 	secret := kube.CreateSecret(r.getGeneratedResourceName(name))
 	r.prepareResource(namespace, secret)
 
-	return sdk.Delete(secret)
+	return r.Delete(r.KContext, secret)
 }
 
 func (r *KonfiguratorTemplateReconciler) prepareResource(namespace string, resource metav1.Object) {
@@ -312,6 +329,6 @@ func (r *KonfiguratorTemplateReconciler) prepareResource(namespace string, resou
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonfiguratorTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&konfiguratorv1alpha1.KonfiguratorTemplate{}).
+		For(&v1alpha1.KonfiguratorTemplate{}).
 		Complete(r)
 }

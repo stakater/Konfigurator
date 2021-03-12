@@ -7,7 +7,7 @@ version: v0.0.27
 keywords:
   - Konfigurator
   - kubernetes
-home: https://github.com/stakater/Konfigurator
+home: https://github.com/stakater/konfigurator
 maintainers:
 - name: Stakater
   email: hello@stakater.com

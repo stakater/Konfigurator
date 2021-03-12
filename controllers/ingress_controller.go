@@ -18,22 +18,23 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
+	kContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	"k8s.io/api/extensions/v1beta1"
-	kContext "github.com/stakater/Konfigurator/pkg/context"
 )
 
 // IngressReconciler reconciles a KonfiguratorTemplate object
 type IngressReconciler struct {
-	Log    logr.Logger
-	Context  *kContext.Context
+	client.Client
+	Log     logr.Logger
+	Context *kContext.Context
 }
 
 // +kubebuilder:rbac:groups=v1,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
@@ -61,7 +62,7 @@ func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Resource is marked for deletion
 	if instance.DeletionTimestamp != nil {
-		if err := r.RemoveFromContext(instance.name, instance.Namespace); err != nil {
+		if err := r.RemoveFromContext(instance.Name, instance.Namespace); err != nil {
 			return reconcilerUtil.RequeueWithError(err)
 		}
 	}
@@ -91,7 +92,7 @@ func (r *IngressReconciler) AddToContext(instance *v1beta1.Ingress) error {
 			return nil
 		}
 	}
-	r.Context.Ingresses = append(r.Context.Ingresses, *return.Resource)
+	r.Context.Ingresses = append(r.Context.Ingresses, *instance)
 	return nil
 }
 func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {

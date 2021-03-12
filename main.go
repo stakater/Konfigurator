@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"os"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -31,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kContext "github.com/stakater/Konfigurator/pkg/context"
 	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/controllers"
+	kContext "github.com/stakater/konfigurator/pkg/context"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -65,53 +64,57 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	namespaces := getWatchNamespace()
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "1d6b66a1.stakater.com",
-		NewCache:           	mgr.GetCache().MultiNamespacedCacheBuilder(namespaces),
-	})
+	}
+	if namespace := getWatchNamespace(); namespace != "" {
+		options.Namespace = namespace
+	}
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	
 	var resourceContext kContext.Context
 
 	if err = (&controllers.KonfiguratorTemplateReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KonfiguratorTemplate"),
-		Scheme: mgr.GetScheme(),
-		Context: resourceContext,
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("KonfiguratorTemplate"),
+		Scheme:   mgr.GetScheme(),
+		XContext: &resourceContext,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KonfiguratorTemplate")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.PodReconciler{
-		Log:    ctrl.Log.WithName("controllers").WithName("Pod"),
-		Context: resourceContext,
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("Pod"),
+		Context: &resourceContext,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.ServiceReconciler{
-		Log:    ctrl.Log.WithName("controllers").WithName("Pod"),
-		Context: resourceContext,
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("Service"),
+		Context: &resourceContext,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+		setupLog.Error(err, "unable to create controller", "controller", "Service")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.IngressReconciler{
-		Log:    ctrl.Log.WithName("controllers").WithName("Ingress"),
-		Context: resourceContext,
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("Ingress"),
+		Context: &resourceContext,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Ingress")
 		os.Exit(1)
@@ -137,7 +140,7 @@ func main() {
 func getWatchNamespace() string {
 	namespace := os.Getenv("WATCH_NAMESPACE")
 	if namespace == "" {
-		setupLog.Infof("WATCH_NAMESPACE is empty, so looking in all namespaces")
+		setupLog.Info("WATCH_NAMESPACE is empty, so looking in all namespaces")
 	}
 	return namespace
 }

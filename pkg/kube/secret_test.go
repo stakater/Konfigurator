@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
+	"github.com/stakater/konfigurator/api/v1alpha1"
 )
 
 func TestCreateSecret(t *testing.T) {

@@ -11,7 +11,7 @@ This is one of the perfect examples where konfigurator can be of use.
 - Konfigurator
 - Fluentd plugins (slack and concat)
 
-If you don't have konfigurator running, follow the guide on the [readme](https://www.github.com/stakater/Konfigurator/tree/master/README.md) to deploy it.
+If you don't have konfigurator running, follow the guide on the [readme](https://www.github.com/stakater/konfigurator/tree/master/README.md) to deploy it.
 
 ### Fluentd plugins
 

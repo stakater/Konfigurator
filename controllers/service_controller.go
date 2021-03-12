@@ -18,22 +18,23 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
+	kContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	corev1 "k8s.io/api/core/v1"
-	kContext "github.com/stakater/Konfigurator/pkg/context"
 )
 
 // ServiceReconciler reconciles a KonfiguratorTemplate object
 type ServiceReconciler struct {
-	Log    logr.Logger
-	Context  *kContext.Context
+	client.Client
+	Log     logr.Logger
+	Context *kContext.Context
 }
 
 // +kubebuilder:rbac:groups=v1,resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -61,7 +62,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Resource is marked for deletion
 	if instance.DeletionTimestamp != nil {
-		if err := r.RemoveFromContext(instance.name, instance.Namespace); err != nil {
+		if err := r.RemoveFromContext(instance.Name, instance.Namespace); err != nil {
 			return reconcilerUtil.RequeueWithError(err)
 		}
 	}
@@ -91,7 +92,7 @@ func (r *ServiceReconciler) AddToContext(instance *corev1.Service) error {
 			return nil
 		}
 	}
-	r.Context.Services = append(r.Context.Services, *return.Resource)
+	r.Context.Services = append(r.Context.Services, *instance)
 	return nil
 }
 func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
