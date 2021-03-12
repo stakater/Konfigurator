@@ -37,9 +37,7 @@ type PodReconciler struct {
 	Context *kContext.Context
 }
 
-// +kubebuilder:rbac:groups=v1,resources=pods,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=v1,resources=pods/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=v1,resources=pods/finalizers,verbs=update
+// +kubebuilder:rbac:groups=v1,resources=pods,verbs=get;list;watch;
 
 func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("pod", req.NamespacedName)

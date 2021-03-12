@@ -37,9 +37,7 @@ type IngressReconciler struct {
 	Context *kContext.Context
 }
 
-// +kubebuilder:rbac:groups=v1,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=v1,resources=ingresses/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=v1,resources=ingresses/finalizers,verbs=update
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;
 
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("ingress", req.NamespacedName)

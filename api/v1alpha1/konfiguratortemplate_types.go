@@ -67,6 +67,9 @@ type KonfiguratorTemplateStatus struct {
 	CurrentPhase Phase `json:"currentPhase"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
@@ -77,6 +80,8 @@ type KonfiguratorTemplate struct {
 	Spec              KonfiguratorTemplateSpec   `json:"spec"`
 	Status            KonfiguratorTemplateStatus `json:"status,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // +kubebuilder:object:root=true
 
