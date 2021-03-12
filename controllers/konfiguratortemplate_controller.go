@@ -41,7 +41,7 @@ import (
 
 const (
 	TemplateFinalizer     string = "konfigurator.stakater.com/konfiguratortemplate"
-	GeneratedByAnnotation        = "konfigurator.stakater.com/generated-by"
+	GeneratedByAnnotation string = "konfigurator.stakater.com/generated-by"
 )
 
 // KonfiguratorTemplateReconciler reconciles a KonfiguratorTemplate object
