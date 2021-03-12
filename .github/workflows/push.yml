@@ -42,7 +42,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
         WITH_V: true
         DEFAULT_BUMP: patch
-        RELEASE_BRANCHES: main
+        RELEASE_BRANCHES: master
         DRY_RUN: true
     
     - name: Set up QEMU
@@ -54,13 +54,13 @@ jobs:
     - name: Login to Registry
       uses: docker/login-action@v1
       with:
-        registry: ${{ secrets.STAKATER_NEXUS_REGISTRY }}
-        username: ${{ secrets.STAKATER_NEXUS_USERNAME }}
-        password: ${{ secrets.STAKATER_NEXUS_PASSWORD }}
+        registry: ${{ secrets.STAKATER_NEXUS_PROD_REGISTRY }}
+        username: ${{ secrets.STAKATER_NEXUS_PROD_USERNAME }}
+        password: ${{ secrets.STAKATER_NEXUS_PROD_PASSWORD }}
 
     - name: Generate image repository path
       run: |
-        echo IMAGE_REPOSITORY=$(echo ${{ secrets.STAKATER_NEXUS_REGISTRY }}/${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
+        echo IMAGE_REPOSITORY=$(echo ${{ secrets.STAKATER_NEXUS_PROD_REGISTRY }}/${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
 
     - name: Build and push
       uses: docker/build-push-action@v2
@@ -86,7 +86,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
         WITH_V: false
         DEFAULT_BUMP: patch
-        RELEASE_BRANCHES: main
+        RELEASE_BRANCHES: master
         DRY_RUN: true
 
     # Update chart tag to the latest semver tag
@@ -105,7 +105,7 @@ jobs:
     - name: Publish Helm chart
       run: |
         helm package ./charts/konfigurator --destination ./packaged-chart
-        curl -u ${{ secrets.STAKATER_NEXUS_HELM_USERNAME }}:${{ secrets.STAKATER_NEXUS_HELM_PASSWORD }} ${{ secrets.STAKATER_NEXUS_HELM_REGISTRY }} --upload-file ./packaged-chart/*.tgz
+        curl -u ${{ secrets.STAKATER_NEXUS_PROD_HELM_USERNAME }}:${{ secrets.STAKATER_NEXUS_PROD_HELM_PASSWORD }} ${{ secrets.STAKATER_NEXUS_PROD_HELM_REGISTRY }} --upload-file ./packaged-chart/*.tgz
         rm -rf ./packaged-chart
 
     # Commit back changes
@@ -120,13 +120,13 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.STAKATER_GITHUB_TOKEN }}
-        branch: main
+        branch: master
     - name: Push Latest Tag
       uses: anothrNick/github-tag-action@1.26.0
       env:
         GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
         WITH_V: true
-        RELEASE_BRANCHES: main
+        RELEASE_BRANCHES: master
         DEFAULT_BUMP: patch
 
     - name: Notify Slack
