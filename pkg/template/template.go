@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/stakater/Konfigurator/pkg/template/funcs"
+	"github.com/stakater/konfigurator/pkg/template/funcs"
 )
 
 func newTemplate(name string) *template.Template {

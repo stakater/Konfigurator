@@ -3,9 +3,9 @@ package reflect
 import (
 	"testing"
 
-	"github.com/stakater/Konfigurator/pkg/kube/lists/volumes"
-	objectVolume "github.com/stakater/Konfigurator/pkg/kube/objects/volume"
-	"github.com/stakater/Konfigurator/pkg/kube/testutil"
+	"github.com/stakater/konfigurator/pkg/kube/lists/volumes"
+	objectVolume "github.com/stakater/konfigurator/pkg/kube/objects/volume"
+	"github.com/stakater/konfigurator/pkg/kube/testutil"
 )
 
 func TestAssignValueTo(t *testing.T) {

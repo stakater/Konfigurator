@@ -1,0 +1,90 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.5.0
+  creationTimestamp: null
+  name: konfiguratortemplates.konfigurator.stakater.com
+spec:
+  group: konfigurator.stakater.com
+  names:
+    kind: KonfiguratorTemplate
+    listKind: KonfiguratorTemplateList
+    plural: konfiguratortemplates
+    singular: konfiguratortemplate
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: KonfiguratorTemplate is the Schema for the konfiguratortemplates API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: KonfiguratorTemplateSpec defines the desired state of KonfiguratorTemplate
+            properties:
+              app:
+                properties:
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                  volumeMounts:
+                    items:
+                      properties:
+                        container:
+                          type: string
+                        mountPath:
+                          type: string
+                      required:
+                      - container
+                      - mountPath
+                      type: object
+                    type: array
+                required:
+                - kind
+                - name
+                - volumeMounts
+                type: object
+              renderTarget:
+                type: string
+              templates:
+                additionalProperties:
+                  type: string
+                type: object
+            required:
+            - app
+            - renderTarget
+            - templates
+            type: object
+          status:
+            description: KonfiguratorTemplateStatus defines the observed state of KonfiguratorTemplate
+            properties:
+              currentPhase:
+                type: string
+            required:
+            - currentPhase
+            type: object
+        required:
+        - metadata
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -11,7 +11,7 @@ This is one of the perfect examples where konfigurator can be of use.
 - Konfigurator
 - Fluentd plugins (slack and concat)
 
-If you don't have konfigurator running, follow the guide on the [readme](https://www.github.com/stakater/Konfigurator/tree/master/README.md) to deploy it.
+If you don't have konfigurator running, follow the guide on the [readme](https://www.github.com/stakater/konfigurator/tree/master/README.md) to deploy it.
 
 ### Fluentd plugins
 
@@ -92,7 +92,7 @@ spec:
       </match>
 ```
 
-More detailed information about the CRD properties are [here](https://www.github.com/stakater/Konfigurator/tree/master/docs/konfigurator-template.md).
+More detailed information about the CRD properties are [here](https://www.github.com/stakater/konfigurator/tree/master/docs/konfigurator-template.md).
 
 Once you've done that, remove the volume mounts for the old ConfigMap since Konfigurator will automatically mount the rendered config to fluentd pods.
 

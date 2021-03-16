@@ -3,11 +3,11 @@ package mounts
 import (
 	"fmt"
 
-	"github.com/stakater/Konfigurator/pkg/apis/konfigurator/v1alpha1"
-	"github.com/stakater/Konfigurator/pkg/kube/lists/containers"
-	"github.com/stakater/Konfigurator/pkg/kube/lists/volumes"
-	objectVolume "github.com/stakater/Konfigurator/pkg/kube/objects/volume"
-	kubereflect "github.com/stakater/Konfigurator/pkg/kube/reflect"
+	"github.com/stakater/konfigurator/api/v1alpha1"
+	"github.com/stakater/konfigurator/pkg/kube/lists/containers"
+	"github.com/stakater/konfigurator/pkg/kube/lists/volumes"
+	objectVolume "github.com/stakater/konfigurator/pkg/kube/objects/volume"
+	kubereflect "github.com/stakater/konfigurator/pkg/kube/reflect"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -64,9 +64,12 @@ func (mm *MountManager) UnmountVolumes() error {
 
 func (mm *MountManager) removeVolume() error {
 	volumes := volumes.GetFromObject(mm.Target)
-	
+
 	if !mm.volumeExists(volumes) {
-		return fmt.Errorf("Could not find the desired volume mount on the app resource")
+		//NOTE(Jose): No need to fail if volume does not exist.
+		//This leads konfiguratordelete stuck when it was deleted before reconcile
+		//return fmt.Errorf("Could not find the desired volume mount on the app resource")
+		return nil
 	}
 
 	desiredVolumes := volumes[:0]

@@ -1,3 +1,0 @@
-apiVersion: konfigurator.stakater.com/v1alpha1
-kind: KonfiguratorTemplate
-projectName: Konfigurator

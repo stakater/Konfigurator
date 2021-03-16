@@ -1,0 +1,7 @@
+apiVersion: konfigurator.stakater.com/v1alpha1
+kind: KonfiguratorTemplate
+metadata:
+  name: konfiguratortemplate-sample
+spec:
+  # Add fields here
+  foo: bar
