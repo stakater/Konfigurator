@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stakater/konfigurator/api/v1alpha1"
