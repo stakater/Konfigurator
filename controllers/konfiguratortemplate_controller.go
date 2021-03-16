@@ -306,7 +306,7 @@ func (r *KonfiguratorTemplateReconciler) createSecret(name, namespace string) er
 	if _, err := k8sutils.CreateOrUpdate(r.KContext, r.Client, secret, func() error {
 
 		// Add rendered data to resource
-		secret.Data = kube.ToSecretData(r.RenderedTemplates)
+		secret.StringData = r.RenderedTemplates
 
 		//Note(Jose): No need to set owner reference because it is deleted manually
 		return nil

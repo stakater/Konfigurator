@@ -17,15 +17,3 @@ func CreateSecret(name string) *v1.Secret {
 		},
 	}
 }
-
-func ToSecretData(data map[string]string) (secretData map[string][]byte) {
-	secretData = make(map[string][]byte)
-
-	for key, value := range data {
-		//NOTE(Jose): Just byte conversion is enough to create a secret
-		// This encrypt the data twice so the rendered secret has wrong data.
-		//secretData[key] = []byte(base64.StdEncoding.EncodeToString([]byte(value)))
-		secretData[key] = []byte(value)
-	}
-	return
-}
