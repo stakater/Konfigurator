@@ -66,7 +66,10 @@ func (mm *MountManager) removeVolume() error {
 	volumes := volumes.GetFromObject(mm.Target)
 
 	if !mm.volumeExists(volumes) {
-		return fmt.Errorf("Could not find the desired volume mount on the app resource")
+		//NOTE(Jose): No need to fail if volume does not exist.
+		//This leads konfiguratordelete stuck when it was deleted before reconcile
+		//return fmt.Errorf("Could not find the desired volume mount on the app resource")
+		return nil
 	}
 
 	desiredVolumes := volumes[:0]

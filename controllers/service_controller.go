@@ -18,14 +18,13 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kContext "github.com/stakater/konfigurator/pkg/context"
+	xContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -34,7 +33,7 @@ import (
 type ServiceReconciler struct {
 	client.Client
 	Log     logr.Logger
-	Context *kContext.Context
+	Context *xContext.Context
 }
 
 // +kubebuilder:rbac:groups=v1,resources=services,verbs=get;list;watch;
@@ -45,13 +44,16 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// your logic here
 
 	log := r.Log.WithValues("template", req.NamespacedName)
-	log.Info("Reconciling template: " + req.Name)
+	log.Info("Reconciling service: " + req.Name)
 	// Fetch the service instance
 	instance := &corev1.Service{}
 
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			if err := r.RemoveFromContext(instance.Name, instance.Namespace); err != nil {
+				return reconcilerUtil.RequeueWithError(err)
+			}
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -72,6 +74,8 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 func (r *ServiceReconciler) RemoveFromContext(name, namespace string) error {
+	//log := r.Log.WithValues("RemoveFromContext", namespace)
+	//log.Info(fmt.Sprintf("Remove Service %s from the context", name))
 	for index, service := range r.Context.Services {
 		if service.Name == name && service.Namespace == namespace {
 			// Remove the resource
@@ -79,7 +83,11 @@ func (r *ServiceReconciler) RemoveFromContext(name, namespace string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Could not find service resource %v in current context", name)
+	//log.Info(fmt.Sprintf("Service %s was not in the context", name))
+	//NOTE(Jose): Because the upstream resource is not existing, it will fail forever.
+	// We dont need to try remove non-existing resources.
+	//return fmt.Errorf("Could not find service resource %v in current context", name)
+	return nil
 }
 
 func (r *ServiceReconciler) AddToContext(instance *corev1.Service) error {

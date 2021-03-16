@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	k8sutils "github.com/stakater/konfigurator/pkg/utils/k8s"
@@ -42,6 +43,7 @@ import (
 const (
 	TemplateFinalizer     string = "konfigurator.stakater.com/konfiguratortemplate"
 	GeneratedByAnnotation string = "konfigurator.stakater.com/generated-by"
+	DefaultRequeueTime           = 120 * time.Second
 )
 
 // KonfiguratorTemplateReconciler reconciles a KonfiguratorTemplate object
@@ -95,6 +97,7 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 	if instance.DeletionTimestamp != nil {
 		log.Info("Deletion timestamp found for instance " + req.Name)
 		if finalizerUtil.HasFinalizer(instance, TemplateFinalizer) {
+
 			return r.handleDelete(ctx, req, instance)
 		}
 		// Finalizer doesn't exist so clean up is already done
@@ -133,7 +136,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	if err := r.MountVolumes(instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
-	return ctrl.Result{}, nil
+	return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
 }
 func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
 	log := r.Log.WithValues("template", req.NamespacedName)
@@ -148,11 +151,16 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 	log.Info("Deleting resources...")
 
 	err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace)
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
-	log.Info("Deleted KonfiguratorTemplate: %v", instance.Name)
+	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
+	// Update instance
+	if err := r.Client.Update(ctx, instance); err != nil {
+		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+	}
+	log.Info(fmt.Sprintf("Deleted KonfiguratorTemplate: %v", instance.Name))
 
 	return ctrl.Result{}, nil
 }
@@ -166,7 +174,7 @@ func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, te
 	r.RenderedTemplates = make(map[string]string)
 
 	for fileName, fileData := range templates {
-		rendered, err := template.ExecuteString(fileData, ctx)
+		rendered, err := template.ExecuteString(fileData, r.XContext)
 		if err != nil {
 			return err
 		}
@@ -177,9 +185,11 @@ func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, te
 }
 
 func (r *KonfiguratorTemplateReconciler) CreateResources(name, namespace string, renderTarget v1alpha1.RenderTarget) error {
+	log := r.Log.WithValues("CreateResources", namespace)
 	// Generate resource name
+	log.Info("CreateResources...")
 	resourceName := r.getGeneratedResourceName(name)
-
+	//log.Info("getGeneratedResourceName ...")
 	// Check for render target and create resource
 	if renderTarget == v1alpha1.RenderTargetConfigMap {
 		return r.createConfigMap(resourceName, namespace)
@@ -269,11 +279,14 @@ func (r *KonfiguratorTemplateReconciler) fetchAppObject(app v1alpha1.App, namesp
 }
 
 func (r *KonfiguratorTemplateReconciler) createConfigMap(name, namespace string) error {
+	log := r.Log.WithValues("createConfigMap", namespace)
+	// Generate resource name
+	log.Info("createConfigMap...")
 	configmap := kube.CreateConfigMap(name)
+	r.prepareResource(namespace, configmap)
+	log.Info("kube.CreateConfigMap...")
 
 	if _, err := k8sutils.CreateOrUpdate(r.KContext, r.Client, configmap, func() error {
-
-		r.prepareResource(namespace, configmap)
 
 		// Add rendered data to resource
 		configmap.Data = r.RenderedTemplates
@@ -288,14 +301,14 @@ func (r *KonfiguratorTemplateReconciler) createConfigMap(name, namespace string)
 
 func (r *KonfiguratorTemplateReconciler) createSecret(name, namespace string) error {
 	secret := kube.CreateSecret(name)
+	r.prepareResource(namespace, secret)
 
 	if _, err := k8sutils.CreateOrUpdate(r.KContext, r.Client, secret, func() error {
 
-		r.prepareResource(namespace, secret)
-
 		// Add rendered data to resource
 		secret.Data = kube.ToSecretData(r.RenderedTemplates)
-		//Note(Jose): No need to set owner reference because delete manually
+
+		//Note(Jose): No need to set owner reference because it is deleted manually
 		return nil
 	}); err != nil {
 		return err

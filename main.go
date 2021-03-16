@@ -32,7 +32,7 @@ import (
 
 	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/controllers"
-	kContext "github.com/stakater/konfigurator/pkg/context"
+	xContext "github.com/stakater/konfigurator/pkg/context"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -81,7 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var resourceContext kContext.Context
+	var resourceContext xContext.Context
 
 	if err = (&controllers.KonfiguratorTemplateReconciler{
 		Client:   mgr.GetClient(),

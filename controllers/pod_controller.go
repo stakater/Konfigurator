@@ -18,14 +18,13 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kContext "github.com/stakater/konfigurator/pkg/context"
+	xContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -34,7 +33,7 @@ import (
 type PodReconciler struct {
 	client.Client
 	Log     logr.Logger
-	Context *kContext.Context
+	Context *xContext.Context
 }
 
 // +kubebuilder:rbac:groups=v1,resources=pods,verbs=get;list;watch;
@@ -45,13 +44,16 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	// your logic here
 
 	log := r.Log.WithValues("template", req.NamespacedName)
-	log.Info("Reconciling template: " + req.Name)
+	log.Info("Reconciling pod: " + req.Name)
 	// Fetch the pod instance
 	instance := &corev1.Pod{}
 
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			if err := r.RemoveFromContext(instance.Name, instance.Namespace); err != nil {
+				return reconcilerUtil.RequeueWithError(err)
+			}
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -72,6 +74,8 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 func (r *PodReconciler) RemoveFromContext(name, namespace string) error {
+	//log := r.Log.WithValues("RemoveFromContext", namespace)
+	//log.Info(fmt.Sprintf("Remove Pod %s from the context", name))
 	for index, pod := range r.Context.Pods {
 		if pod.Name == name && pod.Namespace == namespace {
 			// Remove the resource
@@ -79,7 +83,11 @@ func (r *PodReconciler) RemoveFromContext(name, namespace string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Could not find pod resource %v in current context", name)
+	//log.Info(fmt.Sprintf("Pod %s was not in the context", name))
+	//NOTE(Jose): Because the upstream resource is not existing, it will fail forever.
+	// We dont need to try remove non-existing resources.
+	//return fmt.Errorf("Could not find pod resource %v in current context", name)
+	return nil
 }
 
 func (r *PodReconciler) AddToContext(instance *corev1.Pod) error {
