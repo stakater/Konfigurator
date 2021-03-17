@@ -100,6 +100,7 @@ func (r *KonfiguratorTemplate) validateEngine() error {
 	if err != nil {
 		return err
 	}
+	konfiguratortemplatelog.Info(fmt.Sprintf("AdmissionRequest: %s",jsonData), "name", r.Name)
 	resp, err := http.Post(parsedUrl.String(), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err

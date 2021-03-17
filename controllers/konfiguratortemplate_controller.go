@@ -225,7 +225,7 @@ func (r *KonfiguratorTemplateReconciler) UnmountVolumes(instance *v1alpha1.Konfi
 		instance,
 		func(mountManager *mounts.MountManager) error {
 			err := mountManager.UnmountVolumes()
-			if err != nil {
+			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("Failed to unmount volume mounts from the specified resource: %v", err)
 			}
 			return nil
@@ -280,7 +280,7 @@ func (r *KonfiguratorTemplateReconciler) fetchAppObject(app v1alpha1.App, namesp
 		types.NamespacedName{Name: app.Name, Namespace: namespace},
 		appObj.(client.Object),
 	); err != nil {
-		return nil, fmt.Errorf("Failed to get the desired app: %v", err)
+		return nil, err
 	}
 
 	return appObj, nil
