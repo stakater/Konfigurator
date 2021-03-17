@@ -7,6 +7,56 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - konfigurator.stakater.com
   resources:
   - konfiguratortemplates
@@ -21,38 +71,8 @@ rules:
 - apiGroups:
   - konfigurator.stakater.com
   resources:
-  - konfiguratortemplates/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - konfigurator.stakater.com
-  resources:
   - konfiguratortemplates/status
   verbs:
   - get
   - patch
   - update
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - v1
-  resources:
-  - services
-  verbs:
-  - get
-  - list
-  - watch

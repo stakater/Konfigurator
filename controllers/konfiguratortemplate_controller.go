@@ -58,7 +58,10 @@ type KonfiguratorTemplateReconciler struct {
 
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates,verbs=get;list;watch;create;update;patch;delete
+
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;statefulsets,verbs=get;list;update;patch;watch
+// +kubebuilder:rbac:groups="",resources=services;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -136,8 +139,13 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	if err := r.MountVolumes(instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
-	return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
+	if instance.Spec.UpdateFrequency == 0 {
+		return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
+	}
+
+	return reconcilerUtil.RequeueAfter(time.Duration(instance.Spec.UpdateFrequency) * time.Minute)
 }
+
 func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
 	log := r.Log.WithValues("template", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating delete for KonfiguratorTemplate: %v", instance.Name))

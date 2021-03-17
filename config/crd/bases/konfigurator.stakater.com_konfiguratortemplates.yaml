@@ -61,6 +61,11 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              updateFrequency:
+                description: Rendering frequency in minutes
+                type: integer
+              validationWebhookURL:
+                type: string
             required:
             - app
             - renderTarget

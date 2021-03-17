@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -117,6 +118,10 @@ func main() {
 		Context: &resourceContext,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Ingress")
+		os.Exit(1)
+	}
+	if err = (&konfiguratorv1alpha1.KonfiguratorTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "KonfiguratorTemplate")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
