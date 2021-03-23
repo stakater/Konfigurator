@@ -17,13 +17,17 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/stakater/konfigurator/pkg/kube"
 	"github.com/stakater/konfigurator/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -44,7 +48,13 @@ const (
 	TemplateFinalizer     string = "konfigurator.stakater.com/konfiguratortemplate"
 	GeneratedByAnnotation string = "konfigurator.stakater.com/generated-by"
 	DefaultRequeueTime           = 120 * time.Second
+	ValidationRequestKey  string = "template"
 )
+
+type ValidateResponse struct {
+	Allowed bool   `json:"allowed"`
+	Message string `json:"message"`
+}
 
 // KonfiguratorTemplateReconciler reconciles a KonfiguratorTemplate object
 type KonfiguratorTemplateReconciler struct {
@@ -126,7 +136,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
 	log.Info("Rendering templates...")
-	if err := r.RenderTemplates(ctx, instance.Spec.Templates); err != nil {
+	if err := r.RenderTemplates(instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
@@ -177,8 +187,8 @@ func (r *KonfiguratorTemplateReconciler) getGeneratedResourceName(name string) s
 	return strings.ToLower("konfigurator-" + name + "-rendered")
 }
 
-func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, templates map[string]string) error {
-
+func (r *KonfiguratorTemplateReconciler) RenderTemplates(instance *v1alpha1.KonfiguratorTemplate) error {
+	templates := instance.Spec.Templates
 	r.RenderedTemplates = make(map[string]string)
 
 	for fileName, fileData := range templates {
@@ -188,7 +198,37 @@ func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, te
 		}
 		r.RenderedTemplates[fileName] = string(rendered)
 	}
+	return r.validateEngine(instance.Spec.ValidationWebhookURL)
+}
 
+func (r *KonfiguratorTemplateReconciler) validateEngine(webhookURL string) error {
+	if webhookURL == "" {
+		return nil
+	}
+	parsedUrl, err := url.ParseRequestURI(webhookURL)
+	if err != nil {
+		return err
+	}
+
+	validationRequest := map[string]map[string]string{
+		ValidationRequestKey: r.RenderedTemplates,
+	}
+	jsonData, err := json.Marshal(validationRequest)
+	if err != nil {
+		return fmt.Errorf("Validation request serialization failed: %s", err.Error())
+	}
+	resp, err := http.Post(parsedUrl.String(), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("Validation request failed: %s", err.Error())
+	}
+	var res ValidateResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return fmt.Errorf("Validation response decoding failed: %s", err.Error())
+	}
+
+	if !res.Allowed {
+		return fmt.Errorf("Template is invalid: %s", res.Message)
+	}
 	return nil
 }
 
