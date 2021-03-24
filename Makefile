@@ -54,7 +54,7 @@ unit-test:
 	go test ./...
 
 # Build manager binary
-manager: generate fmt vet lint helm-lint
+manager: generate fmt vet helm-lint
 	go build -o bin/manager main.go
 
 # Lint
@@ -62,7 +62,7 @@ lint:
 	golangci-lint run --timeout=10m ./...
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests lint helm-lint
+run: generate fmt vet manifests helm-lint
 	go run ./main.go
 
 # Install CRDs into a cluster

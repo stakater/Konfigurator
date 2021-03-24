@@ -2,7 +2,6 @@ package mounts
 
 import (
 	"fmt"
-
 	"github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/pkg/kube/lists/containers"
 	"github.com/stakater/konfigurator/pkg/kube/lists/volumes"

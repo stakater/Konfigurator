@@ -1,4 +1,5 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - konfigurator_v1alpha1_konfiguratortemplate.yaml
+- konfigurator_v1alpha1_podmetadatainjector.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

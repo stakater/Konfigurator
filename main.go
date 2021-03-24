@@ -120,6 +120,15 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Ingress")
 		os.Exit(1)
 	}
+	if err = (&controllers.PodMetadataInjectorReconciler{
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("PodMetadataInjector"),
+		Scheme:  mgr.GetScheme(),
+		Context: &resourceContext,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PodMetadataInjector")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

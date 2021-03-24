@@ -76,3 +76,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors/status
+  verbs:
+  - get
+  - patch
+  - update
