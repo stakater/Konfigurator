@@ -108,5 +108,7 @@ tags
 
 # GoLand
 .idea/
+# test
+cover.out
 
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode

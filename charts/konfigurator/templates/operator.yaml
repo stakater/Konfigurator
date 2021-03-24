@@ -2,23 +2,30 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-{{ include "konfigurator.labels.stakater" . | indent 4 }}
-{{ include "konfigurator.labels.chart" . | indent 4 }}
+  {{- include "konfigurator.labels.stakater" . | nindent 4 }}
+  {{- include "konfigurator.labels.chart" . | nindent 4 }}
   name: {{ template "konfigurator.name" . }}
+  namespace: {{ .Release.Namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-{{ include "konfigurator.labels.selector" . | indent 6 }}
+{{- include "konfigurator.labels.selector" . | nindent 6 }}
   template:
     metadata:
       labels:
-{{ include "konfigurator.labels.selector" . | indent 8 }}
+{{- include "konfigurator.labels.selector" . | nindent 8 }}
     spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
       containers:
         - name: {{ template "konfigurator.name" . }}
-          image: "{{ .Values.konfigurator.image.name }}:{{ .Values.konfigurator.image.tag }}"
-          imagePullPolicy: {{ .Values.konfigurator.image.pullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           ports:
           - containerPort: 60000
             name: metrics
@@ -27,5 +34,19 @@ spec:
           env:
             - name: OPERATOR_NAME
               value: "{{ template "konfigurator.name" . }}"
-{{ toYaml .Values.konfigurator.env | indent 12 }}
+{{ toYaml .Values.env | indent 12 }}
       serviceAccountName: {{ template "konfigurator.name" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+  {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
