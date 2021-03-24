@@ -5,7 +5,7 @@ metadata:
   labels:
   {{- include "konfigurator.labels.stakater" . | nindent 4 }}
   {{- include "konfigurator.labels.chart" . | nindent 4 }}
-name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role
+  name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role
 rules:
 - apiGroups:
   - ""
