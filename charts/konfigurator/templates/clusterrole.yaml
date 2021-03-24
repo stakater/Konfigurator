@@ -1,0 +1,105 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+  {{- include "konfigurator.labels.stakater" . | nindent 4 }}
+  {{- include "konfigurator.labels.chart" . | nindent 4 }}
+name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - konfiguratortemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - konfiguratortemplates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors/status
+  verbs:
+  - get
+  - patch
+  - update

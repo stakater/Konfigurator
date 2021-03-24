@@ -17,13 +17,13 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 
 {{- define "konfigurator.labels.selector" -}}
 app: {{ template "konfigurator.name" . }}
-group: {{ .Values.konfigurator.labels.group }}
-provider: {{ .Values.konfigurator.labels.provider }}
+group: {{ .Values.labels.group }}
+provider: {{ .Values.labels.provider }}
 {{- end -}}
 
 {{- define "konfigurator.labels.stakater" -}}
 {{ template "konfigurator.labels.selector" . }}
-version: {{ .Values.konfigurator.labels.version }}
+version: {{ .Values.labels.version }}
 {{- end -}}
 
 {{- define "konfigurator.labels.chart" -}}

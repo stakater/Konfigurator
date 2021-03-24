@@ -1,0 +1,15 @@
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+{{- include "konfigurator.labels.stakater" . | nindent 4 }}
+{{- include "konfigurator.labels.chart" . | nindent 4 }}
+  name: {{ template "konfigurator.name" . }}-role
+rules:
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - "*"
+  verbs:
+  - "*"

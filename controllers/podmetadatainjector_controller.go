@@ -47,6 +47,7 @@ const (
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=podmetadatainjectors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=podmetadatainjectors/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=podmetadatainjectors/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;
 
 func (r *PodMetadataInjectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("podmetadatainjector", req.NamespacedName)

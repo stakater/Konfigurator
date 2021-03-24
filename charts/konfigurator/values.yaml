@@ -1,20 +1,48 @@
-# Generated from deployments/kubernetes/templates/chart/values.yaml.tmpl
+deployCRD: false
 
-kubernetes:
-  host: https://kubernetes.default
+labels:
+  provider: stakater
+  group: com.stakater.platform
+  version: v0.1.2
+env:
+- name: WATCH_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+replicaCount: 1
 
-konfigurator:
-  deployCRD: false
-  labels:
-    provider: stakater
-    group: com.stakater.platform
-    version: v0.0.27
-  image:
-    name: stakater/konfigurator
-    tag:  v0.1.2
-    pullPolicy: IfNotPresent
-  env:
-  - name: WATCH_NAMESPACE
-    valueFrom:
-      fieldRef:
-        fieldPath: metadata.namespace
+image:
+  repository: stakater/konfigurator
+  tag:  v0.1.2
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext: {}
+
+securityContext: {}
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+#   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

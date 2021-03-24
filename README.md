@@ -27,7 +27,7 @@ Deploying Konfigurator requires:
 1. Deploying CRD to your cluster
 2. Deploying Konfigurator operator
 
-You can deploy CRDs either together or separately with the operator in the helm chart by setting `konfigurator.deployCRD` in values.yaml file. 
+You can deploy CRDs either together or separately with the operator in the helm chart by setting `deployCRD` in values.yaml file.
 
 ```bash
 helm repo add stakater https://stakater.github.io/stakater-charts
