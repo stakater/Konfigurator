@@ -4,12 +4,17 @@ Every application has its own log format which means that every time a new appli
 
 This is one of the perfect examples where konfigurator can be of use.
 
+## Architecture
+![fluentd_example_architecture](https://github.com/stakater/Konfigurator/tree/master/examples/fluentd_example.png)
+
 ## Pre-Requisites
 
 - Kubernetes Cluster (1.8.7 or higher)
 - Fluentd (1.0 or higher)
 - Konfigurator
 - Fluentd plugins (slack and concat)
+- Fluentd Configuration validation API server
+- Json schema validation webhook API server
 
 If you don't have konfigurator running, follow the guide on the [readme](https://www.github.com/stakater/konfigurator/tree/master/README.md) to deploy it.
 
@@ -21,6 +26,17 @@ This example requires you to have 2 fluentd plugin installed before you can proc
 - [fluent-plugin-slack](https://github.com/sowawa/fluent-plugin-slack) (Used for sending slack notifications)
 
 Once you have installed the plugins mentioned above, you can proceed to the next step.
+
+### Fluentd Configuration validation API server
+This is responsible for validating the rendered fluentd configuration by the Konfigurator before mounting to the fluentd deployment. So broken syntax is not allowed to use as the fluentd configuration and fluentd stable functioning is guaranteed. 
+You can use your own validator. If you don't have it, please use [this](https://github.com/stakater/fluentd-config-validation-webhook).
+Of course, this validation process is not mandatory, optional. 
+
+### Json schema validation webhook API server
+Application-specific configurations are specified in the pods' annotations. Then these are used to render the fluentd configuration in the konfigurator reconcile loop. If application specific configurations have broken schema, the renering is failed.
+To avoid this failing, we register Json Schema validation webhook in the k8s admission controller. If the application deployment manifests have a specific key (ex: `fluentdConfiguration`) in their annotations, then the validation webhook is performed.
+You can use your own validator. If you don't have it, please use [this](https://github.com/stakater/jsonschema-validation-webhook).
+Of course, this validation process is not mandatory, optional.
 
 ## Setting up Fluentd
 
@@ -64,6 +80,7 @@ metadata:
   name: fluentd
 spec:
   renderTarget: ConfigMap
+  validationWebhookURL: https://configvalidator/fluentd
   app:
     name: fluentd
     kind: DaemonSet
