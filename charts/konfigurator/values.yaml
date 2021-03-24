@@ -11,7 +11,7 @@ konfigurator:
     version: v0.0.27
   image:
     name: stakater/konfigurator
-    tag:  v0.1.1
+    tag:  v0.1.2
     pullPolicy: IfNotPresent
   env:
   - name: WATCH_NAMESPACE
