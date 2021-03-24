@@ -57,9 +57,12 @@ type VolumeMount struct {
 
 // KonfiguratorTemplateSpec defines the desired state of KonfiguratorTemplate
 type KonfiguratorTemplateSpec struct {
+	App          App               `json:"app"`
 	RenderTarget RenderTarget      `json:"renderTarget"`
 	Templates    map[string]string `json:"templates"`
-	App          App               `json:"app"`
+	// Rendering frequency in minutes
+	UpdateFrequency      int    `json:"updateFrequency,omitempty"`
+	ValidationWebhookURL string `json:"validationWebhookURL,omitempty"`
 }
 
 // KonfiguratorTemplateStatus defines the observed state of KonfiguratorTemplate

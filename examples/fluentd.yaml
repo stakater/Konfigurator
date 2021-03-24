@@ -1,0 +1,33 @@
+apiVersion: konfigurator.stakater.com/v1alpha1
+kind: KonfiguratorTemplate
+metadata:
+  name: fluentd
+spec:
+  renderTarget: ConfigMap
+  validationWebhookURL: http://localhost
+  app:
+    name: fluentd
+    kind: DaemonSet
+    volumeMounts:
+    - mountPath: /fluentd/etc/conf
+      container: fluentd
+  templates:
+    fluent.conf: |
+      # Read kubernetes logs
+      <source>
+        @type tail
+        path /var/log/containers/*.log
+        pos_file /var/log/es-containers.log.pos
+        time_format %Y-%m-%dT%H:%M:%S.%N
+        tag kubernetes.*
+        format json
+        read_from_head true
+      </source>
+
+      <filter kubernetes.var.log.containers.**.log>
+        @type kubernetes_metadata
+      </filter>
+
+      <match **>
+        @type stdout
+      </match>

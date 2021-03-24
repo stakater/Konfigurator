@@ -36,7 +36,7 @@ type ServiceReconciler struct {
 	Context *xContext.Context
 }
 
-// +kubebuilder:rbac:groups=v1,resources=services,verbs=get;list;watch;
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;
 
 func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("service", req.NamespacedName)

@@ -3,8 +3,10 @@
 The operator has a CRD named `KonfiguratorTemplate` that can define some of the following properties in the spec:
 
 - templates
-- volumeMounts
+- app
 - renderTarget
+- validationWebhookURL
+- updateFrequency
 
 The `templates` defined can use the go templating syntax to create the configuration templates that the operator will render. Apart from the usual constructs, the templates will have access to the following resources with the constructs below:
 
@@ -64,4 +66,6 @@ You can set the following properties in KonfiguratorTemplate to customize your g
 | app.volumeMounts               | This is an array which lists where the rendered resource will be mounted                                                                                              |                                            |
 | app.volumeMounts.mountPath     | The path inside the container where you want the rendered resource to be mounted                                                                                      | `/home/app/config/`                        |
 | app.volumeMounts.containerName | The container name inside which the resource will be mounted                                                                                                          | `my-container`                             |
-| app.templates                  | A list of key value pairs. All the configuration templates go inside this property. You can paste your static config as is inside this block and it will work as well | `app.config: someConfig`                   |
+| templates                      | A list of key value pairs. All the configuration templates go inside this property. You can paste your static config as is inside this block and it will work as well | `app.config: someConfig`                   |
+| validationWebhookURL           | The webhook URL to validate the rendered configurations. If not specified, then no validation is performed. | https://fluentd.io/config/validation/ |
+| updateFrequency                | The period of time to render the template. The unit is one minute. If not specified, the default time(2min) is used. | 1| 

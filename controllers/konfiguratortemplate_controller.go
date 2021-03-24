@@ -17,13 +17,17 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/stakater/konfigurator/pkg/kube"
 	"github.com/stakater/konfigurator/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -44,7 +48,13 @@ const (
 	TemplateFinalizer     string = "konfigurator.stakater.com/konfiguratortemplate"
 	GeneratedByAnnotation string = "konfigurator.stakater.com/generated-by"
 	DefaultRequeueTime           = 120 * time.Second
+	ValidationRequestKey  string = "template"
 )
+
+type ValidateResponse struct {
+	Allowed bool   `json:"allowed"`
+	Message string `json:"message"`
+}
 
 // KonfiguratorTemplateReconciler reconciles a KonfiguratorTemplate object
 type KonfiguratorTemplateReconciler struct {
@@ -58,7 +68,10 @@ type KonfiguratorTemplateReconciler struct {
 
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates,verbs=get;list;watch;create;update;patch;delete
+
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;statefulsets,verbs=get;list;update;patch;watch
+// +kubebuilder:rbac:groups="",resources=services;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -123,7 +136,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
 	log.Info("Rendering templates...")
-	if err := r.RenderTemplates(ctx, instance.Spec.Templates); err != nil {
+	if err := r.RenderTemplates(instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
@@ -136,8 +149,13 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	if err := r.MountVolumes(instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
-	return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
+	if instance.Spec.UpdateFrequency == 0 {
+		return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
+	}
+
+	return reconcilerUtil.RequeueAfter(time.Duration(instance.Spec.UpdateFrequency) * time.Minute)
 }
+
 func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
 	log := r.Log.WithValues("template", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating delete for KonfiguratorTemplate: %v", instance.Name))
@@ -169,8 +187,8 @@ func (r *KonfiguratorTemplateReconciler) getGeneratedResourceName(name string) s
 	return strings.ToLower("konfigurator-" + name + "-rendered")
 }
 
-func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, templates map[string]string) error {
-
+func (r *KonfiguratorTemplateReconciler) RenderTemplates(instance *v1alpha1.KonfiguratorTemplate) error {
+	templates := instance.Spec.Templates
 	r.RenderedTemplates = make(map[string]string)
 
 	for fileName, fileData := range templates {
@@ -180,7 +198,37 @@ func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, te
 		}
 		r.RenderedTemplates[fileName] = string(rendered)
 	}
+	return r.validateEngine(instance.Spec.ValidationWebhookURL)
+}
 
+func (r *KonfiguratorTemplateReconciler) validateEngine(webhookURL string) error {
+	if webhookURL == "" {
+		return nil
+	}
+	parsedUrl, err := url.ParseRequestURI(webhookURL)
+	if err != nil {
+		return err
+	}
+
+	validationRequest := map[string]map[string]string{
+		ValidationRequestKey: r.RenderedTemplates,
+	}
+	jsonData, err := json.Marshal(validationRequest)
+	if err != nil {
+		return fmt.Errorf("Validation request serialization failed: %s", err.Error())
+	}
+	resp, err := http.Post(parsedUrl.String(), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("Validation request failed: %s", err.Error())
+	}
+	var res ValidateResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return fmt.Errorf("Validation response decoding failed: %s", err.Error())
+	}
+
+	if !res.Allowed {
+		return fmt.Errorf("Template is invalid: %s", res.Message)
+	}
 	return nil
 }
 
@@ -217,7 +265,7 @@ func (r *KonfiguratorTemplateReconciler) UnmountVolumes(instance *v1alpha1.Konfi
 		instance,
 		func(mountManager *mounts.MountManager) error {
 			err := mountManager.UnmountVolumes()
-			if err != nil {
+			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("Failed to unmount volume mounts from the specified resource: %v", err)
 			}
 			return nil
@@ -272,7 +320,7 @@ func (r *KonfiguratorTemplateReconciler) fetchAppObject(app v1alpha1.App, namesp
 		types.NamespacedName{Name: app.Name, Namespace: namespace},
 		appObj.(client.Object),
 	); err != nil {
-		return nil, fmt.Errorf("Failed to get the desired app: %v", err)
+		return nil, err
 	}
 
 	return appObj, nil
