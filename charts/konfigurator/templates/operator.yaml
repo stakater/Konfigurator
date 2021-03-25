@@ -34,7 +34,7 @@ spec:
           env:
           - name: OPERATOR_NAME
             value: "{{ template "konfigurator.name" . }}"
-{{ toYaml .Values.env | indent 12 }}
+{{ toYaml .Values.env | indent 10 }}
       serviceAccountName: {{ template "konfigurator.name" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
