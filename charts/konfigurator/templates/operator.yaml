@@ -27,13 +27,13 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           ports:
-          - containerPort: 60000
+          - containerPort: 8080
             name: metrics
-          command:
-          - Konfigurator
+          args:
+          - --enable-leader-election
           env:
-            - name: OPERATOR_NAME
-              value: "{{ template "konfigurator.name" . }}"
+          - name: OPERATOR_NAME
+            value: "{{ template "konfigurator.name" . }}"
 {{ toYaml .Values.env | indent 12 }}
       serviceAccountName: {{ template "konfigurator.name" . }}
       securityContext:
