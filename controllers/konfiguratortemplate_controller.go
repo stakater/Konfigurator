@@ -136,7 +136,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
 	log.Info("Rendering templates...")
-	if err := r.RenderTemplates(instance); err != nil {
+	if err := r.RenderTemplates(req, instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
@@ -187,13 +187,17 @@ func (r *KonfiguratorTemplateReconciler) getGeneratedResourceName(name string) s
 	return strings.ToLower("konfigurator-" + name + "-rendered")
 }
 
-func (r *KonfiguratorTemplateReconciler) RenderTemplates(instance *v1alpha1.KonfiguratorTemplate) error {
+func (r *KonfiguratorTemplateReconciler) RenderTemplates(req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) error {
+	log := r.Log.WithValues("KonfiguratorTemplate", req.NamespacedName)
+	log.Info("RenderTemplates...")
 	templates := instance.Spec.Templates
 	r.RenderedTemplates = make(map[string]string)
 
 	for fileName, fileData := range templates {
+
 		rendered, err := template.ExecuteString(fileData, r.XContext)
 		if err != nil {
+			log.Info("Rendetemplate.ExecuteString error:" + err.Error())
 			return err
 		}
 		r.RenderedTemplates[fileName] = string(rendered)
@@ -209,18 +213,23 @@ func (r *KonfiguratorTemplateReconciler) validateEngine(webhookURL string) error
 	if err != nil {
 		return err
 	}
+	//type ValidationRequest struct {
+	//	Template map[string]string `json:"template"`
+	//}
+	//validationRequest := &ValidationRequest{
+	//	Template: r.RenderedTemplates,
+	//}
 
-	validationRequest := map[string]map[string]string{
-		ValidationRequestKey: r.RenderedTemplates,
-	}
-	jsonData, err := json.Marshal(validationRequest)
+	jsonData, err := json.Marshal(r.RenderedTemplates)
 	if err != nil {
 		return fmt.Errorf("Validation request serialization failed: %s", err.Error())
 	}
+
 	resp, err := http.Post(parsedUrl.String(), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("Validation request failed: %s", err.Error())
 	}
+	defer resp.Body.Close()
 	var res ValidateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return fmt.Errorf("Validation response decoding failed: %s", err.Error())

@@ -67,7 +67,9 @@ type KonfiguratorTemplateSpec struct {
 
 // KonfiguratorTemplateStatus defines the observed state of KonfiguratorTemplate
 type KonfiguratorTemplateStatus struct {
-	CurrentPhase Phase `json:"currentPhase"`
+	//CurrentPhase Phase `json:"currentPhase"`
+	// Status conditions
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +genclient
@@ -102,3 +104,15 @@ func init() {
 func (k *KonfiguratorTemplate) IsValid() (bool, error) {
 	return true, nil
 }
+
+//NOTE:(Jose) To avoid reconcile loop because of status update in its reconcile
+
+////GetReconcileStatus - returns conditions, required for making Channel ConditionsStatusAware
+//func (k *KonfiguratorTemplate) GetReconcileStatus() []metav1.Condition {
+//	return k.Status.Conditions
+//}
+//
+//// SetReconcileStatus - sets status, required for making Channel ConditionsStatusAware
+//func (k *KonfiguratorTemplate) SetReconcileStatus(reconcileStatus []metav1.Condition) {
+//	k.Status.Conditions = reconcileStatus
+//}

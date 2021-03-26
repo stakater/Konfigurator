@@ -1,0 +1,9 @@
+image:
+  repository: docker-openshift-stakater-nexus.apps.prod.clusters.stakater.io/stakater/konfigurator
+  tag: v0.1.5
+  pullPolicy: IfNotPresent
+imagePullSecrets:
+- name: prod-dockerconfig
+env:
+- name: WATCH_NAMESPACE
+  value: ""

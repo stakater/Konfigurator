@@ -1,0 +1,29 @@
+apiVersion: konfigurator.stakater.com/v1alpha1
+kind: PodMetadataInjector
+metadata:
+  name: fluentd
+  namespace: default
+  annotations:
+    fluentdConfiguration: |
+      [
+        {
+          "containers":
+          [
+            {
+              "expressionFirstLine": "starting regex",
+              "expression": "full regex",
+              "timeFormat": "time format",
+              "containerName": "container-name"
+            }
+          ],
+          "notifications": {
+            "slack": {
+              "webhookURL": "https://google.com",
+              "channelName": "dev-notifications"
+            }
+          }
+        }
+      ]
+
+  labels:
+    app: busybox

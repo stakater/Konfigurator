@@ -39,11 +39,7 @@ type PodReconciler struct {
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;
 
 func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("pod", req.NamespacedName)
-
-	// your logic here
-
-	log := r.Log.WithValues("template", req.NamespacedName)
+	log := r.Log.WithValues("pod", req.NamespacedName)
 	log.Info("Reconciling pod: " + req.Name)
 	// Fetch the pod instance
 	instance := &corev1.Pod{}
@@ -51,6 +47,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			log.Info("Removing pod %s from the context because not existing: " + req.Name)
 			if err := r.RemoveFromContext(instance.Name, instance.Namespace); err != nil {
 				return reconcilerUtil.RequeueWithError(err)
 			}
@@ -62,6 +59,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	// Resource is marked for deletion
 	if instance.DeletionTimestamp != nil {
+		log.Info("Removing pod %s from the context because it is deleted: " + req.Name)
 		if err := r.RemoveFromContext(instance.Name, instance.Namespace); err != nil {
 			return reconcilerUtil.RequeueWithError(err)
 		}

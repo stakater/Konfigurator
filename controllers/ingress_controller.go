@@ -39,11 +39,8 @@ type IngressReconciler struct {
 // +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch;
 
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("ingress", req.NamespacedName)
 
-	// your logic here
-
-	log := r.Log.WithValues("template", req.NamespacedName)
+	log := r.Log.WithValues("ingress", req.NamespacedName)
 	log.Info("Reconciling ingress: " + req.Name)
 	// Fetch the ingress instance
 	instance := &v1beta1.Ingress{}
