@@ -1,0 +1,208 @@
+apiVersion: konfigurator.stakater.com/v1alpha1
+kind: KonfiguratorTemplate
+metadata:
+  name: fluentd
+  labels:
+    app: konfigurator
+spec:
+#  validationWebhookURL: http://test-fluentd-config-validation-webhook.default.svc/validate/
+  validationWebhookURL: http://localhost/validate/
+  renderTarget: ConfigMap
+  app:
+    kind: Deployment
+    name: apps-fluentd
+    volumeMounts:
+      - mountPath: /etc/fluent
+        container: apps-fluentd
+  templates:
+    fluent.conf: |
+      # Takes the messages sent over TCP
+      <source>
+        @id forward
+        @type forward
+      </source>
+
+      # Parse Logs in JSON where possible 
+      <filter kubernetes.var.log.containers.**>
+        @type parser
+        key_name message
+        reserve_data true
+        emit_invalid_record_to_error false
+        <parse>
+          @type json
+        </parse>
+      </filter>
+
+      # Get distinct pods per application
+      {{- $podsWithAnnotations := whereExist .Pods "ObjectMeta.Annotations.fluentdConfiguration" -}}
+      {{- $distinctPods := distinctPodsByOwner $podsWithAnnotations -}}
+      # Create concat filters for supporting multiline
+      {{- range $pod := $distinctPods -}}
+          {{- $config := first (parseJson $pod.ObjectMeta.Annotations.fluentdConfiguration) }}
+          {{- range $containerConfig := $config.containers }}
+              {{- if eq (len $pod.Spec.Containers) 1 }}
+              <filter kubernetes.var.log.containers.{{ (index $pod.ObjectMeta.OwnerReferences 0).Name }}**_{{ $pod.ObjectMeta.Namespace }}_{{ (index $pod.Spec.Containers 0).Name }}**.log>
+              {{- else }}
+      <filter kubernetes.var.log.containers.{{ (index $pod.ObjectMeta.OwnerReferences 0).Name }}**_{{ $pod.ObjectMeta.Namespace }}_{{ $containerConfig.containerName }}**.log>
+              {{- end }}
+          @type concat
+          key message
+          multiline_start_regexp {{ $containerConfig.expressionFirstLine }}
+          flush_interval 5s
+          timeout_label @LOGS
+      </filter>
+      {{- end }}
+      {{- end }}
+
+      # Relabel all logs to ensure timeout logs are treated as normal logs and not ignored
+      <match **>
+          @type relabel
+          @label @LOGS
+      </match>
+
+      <label @LOGS>
+          # Create regexp filters for parsing internal logs of applications
+          {{- range $pod := $distinctPods -}}
+              {{- $config := first (parseJson $pod.ObjectMeta.Annotations.fluentdConfiguration) }}
+              {{- range $containerConfig := $config.containers }}
+                  {{- if eq (len $pod.Spec.Containers) 1 }}
+                      <filter kubernetes.var.log.containers.{{ (index $pod.ObjectMeta.OwnerReferences 0).Name }}**_{{ $pod.ObjectMeta.Namespace }}_{{ (index $pod.Spec.Containers 0).Name }}**.log>
+                  {{- else }}
+                      <filter kubernetes.var.log.containers.{{ (index $pod.ObjectMeta.OwnerReferences 0).Name }}**_{{ $pod.ObjectMeta.Namespace }}_{{ $containerConfig.containerName }}**.log>
+                  {{- end }}
+                          @type parser
+                          key_name message
+                          reserve_data true
+                          <parse>
+                              @type regexp
+                              expression {{ $containerConfig.expression }}
+                              time_format {{ $containerConfig.timeFormat }}
+                          </parse>
+                      </filter>
+              {{- end }}
+          {{- end }}
+
+          # Concatenate multi-line logs (>=16KB)
+          <filter kubernetes.var.log.containers.**>
+              @type concat
+              key message
+              multiline_start_regexp /[0-9]{4}-[0-9]{2}+-[0-9]{2}/
+              separator "\n"
+          </filter>
+
+          # Send parsed logs to both output notification and error labels
+          <match **>
+              @type copy
+              deep_copy true
+              # If one store raises an error, it ignores other stores. So adding `ignore_error` ensures that the log will be sent to all stores regardless of the error
+              <store ignore_error>
+                  @type relabel
+                  @label @OUTPUT
+              </store>
+              <store ignore_error>
+                  @type relabel
+                  @label @NOTIFICATION
+              </store>
+          </match>
+
+      </label>
+
+
+      <label @OUTPUT>
+
+        # Send kubernetes.** to elasticsearch in logging stack
+        <match kubernetes.**>
+          @type copy
+          <store>
+            @id default
+            @type elasticsearch
+            host "#{ENV['OUTPUT_HOST'] || 'elasticsearch.openshift-logging.svc.cluster.local' }"
+            port 9200
+            scheme https
+            ssl_version TLSv1_2
+            target_index_key viaq_index_name
+            id_key viaq_msg_id
+            remove_keys viaq_index_name
+            user fluentd
+            password changeme
+            
+            client_key '/var/run/ocp-collector/secrets/fluentd/tls.key'
+            client_cert '/var/run/ocp-collector/secrets/fluentd/tls.crt'
+            ca_file '/var/run/ocp-collector/secrets/fluentd/ca-bundle.crt'
+            type_name _doc
+
+            retry_tag retry_default
+            write_operation create
+            reload_connections "#{ENV['ES_RELOAD_CONNECTIONS'] || 'true'}"
+            # https://github.com/uken/fluent-plugin-elasticsearch#reload-after
+            reload_after "#{ENV['ES_RELOAD_AFTER'] || '200'}"
+            # https://github.com/uken/fluent-plugin-elasticsearch#sniffer-class-name
+            # sniffer_class_name "#{ENV['ES_SNIFFER_CLASS_NAME'] || 'Fluent::Plugin::ElasticsearchSimpleSniffer'}"
+            reload_on_failure false
+            # 2 ^ 31
+            request_timeout 2147483648
+            <buffer>
+              @type file
+              path '/var/lib/fluentd/default'
+              flush_mode interval
+              flush_interval "#{ENV['ES_FLUSH_INTERVAL'] || '1s'}"
+              flush_thread_count "#{ENV['ES_FLUSH_THREAD_COUNT'] || 2}"
+              flush_at_shutdown "#{ENV['FLUSH_AT_SHUTDOWN'] || 'true'}"
+              retry_type exponential_backoff
+              retry_wait 1s
+              retry_max_interval "#{ENV['ES_RETRY_WAIT'] || '300s'}"
+              retry_forever true
+              queue_limit_length "#{ENV['BUFFER_QUEUE_LIMIT'] || '32' }"
+              total_limit_size "#{ENV['TOTAL_LIMIT_SIZE'] ||  8589934592 }" #8G
+              chunk_limit_size "#{ENV['BUFFER_SIZE_LIMIT'] || '8m' }"
+              overflow_action "#{ENV['BUFFER_QUEUE_FULL_ACTION'] || 'block'}"
+            </buffer>
+          </store>
+        </match>
+      </label>
+
+      <label @NOTIFICATION>
+          # Filter ERROR level logs
+          <filter **>
+              @type grep
+              <regexp>
+                  key level
+                  pattern (ERROR|error|Error|^E[0-9]{4})
+              </regexp>
+          </filter>
+      {{- if ge (len $distinctPods) 1 }}
+      {{- range $pod := $distinctPods -}}
+          {{- $config := first (parseJson $pod.ObjectMeta.Annotations.fluentdConfiguration) }}
+          # Create slack notification matchers for sending error notifications per app
+          <match kubernetes.var.log.containers.{{ (index $pod.ObjectMeta.OwnerReferences 0).Name }}**_{{ $pod.ObjectMeta.Namespace }}_**.log>
+          {{- if $config.notifications.slack }}
+              @type copy
+              <store ignore_error>
+                  @type slack
+                  webhook_url {{ $config.notifications.slack.webhookURL }}
+                  channel {{ $config.notifications.slack.channelName }}
+                  username fluentd
+                  icon_url https://raw.githubusercontent.com/fluent/fluentd-docs/master/public/logo/Fluentd_square.png
+                  flush_interval 15s
+                  parse full
+                  color danger
+                  link_names false
+                  title_keys level
+                  title %s log
+                  message_keys level,timestamp,kubernetes_pod_name,kubernetes_namespace_name,message
+                  message *Level* %s *Time* %s *Pod* %s *Namespace* %s *Message* %s
+                  time_key timestamp
+              </store>
+          {{- else }}
+              # notifications
+              @type null
+          {{- end }}
+          </match>
+      {{- end }}
+      {{- else }}
+          <match app.**>
+          # distinctPods
+          @type null
+          </match>
+      {{- end }}
+      </label>

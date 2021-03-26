@@ -167,11 +167,11 @@ func GetStatefulSet(statefulsetName string) *appsv1.StatefulSet {
 	}
 }
 
-func GetKonfiguratorTemplateStatus() v1alpha1.KonfiguratorTemplateStatus {
-	return v1alpha1.KonfiguratorTemplateStatus{
-		CurrentPhase: v1alpha1.PhaseInitial,
-	}
-}
+//func GetKonfiguratorTemplateStatus() v1alpha1.KonfiguratorTemplateStatus {
+//	return v1alpha1.KonfiguratorTemplateStatus{
+//		CurrentPhase: v1alpha1.PhaseInitial,
+//	}
+//}
 
 func GetKonfiguratorTemplateSpec() v1alpha1.KonfiguratorTemplateSpec {
 	return v1alpha1.KonfiguratorTemplateSpec{
