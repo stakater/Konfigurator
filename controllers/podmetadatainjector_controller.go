@@ -90,16 +90,16 @@ func (r *PodMetadataInjectorReconciler) AddToContext(ctx context.Context, inject
 }
 
 func (r *PodMetadataInjectorReconciler) AddOnePodToContext(instance *corev1.Pod) {
-	log := r.Log.WithValues("podmetadatainjector", req.NamespacedName)
+	log := r.Log.WithValues("podmetadatainjector", instance.Namespace)
 
 	for index, pod := range r.Context.Pods {
 		if pod.Name == instance.Name && pod.Namespace == instance.Namespace {
 			r.Context.Pods[index] = *instance
-			log.Info("Pod manifest updated in the xcontext:" + req.Name)
+			log.Info("Pod manifest updated in the xcontext:" + instance.Name)
 			return
 		}
 	}
-	log.Info("Pod manifest appended in the xcontext:" + req.Name)
+	log.Info("Pod manifest appended in the xcontext:" + instance.Name)
 	r.Context.Pods = append(r.Context.Pods, *instance)
 }
 
