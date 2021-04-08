@@ -91,6 +91,7 @@ func (r *PodMetadataInjectorReconciler) AddOnePodToContext(instance *corev1.Pod)
 	for index, pod := range r.Context.Pods {
 		if pod.Name == instance.Name && pod.Namespace == instance.Namespace {
 			r.Context.Pods[index] = *instance
+			return
 		}
 	}
 	r.Context.Pods = append(r.Context.Pods, *instance)
