@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	xContext "github.com/stakater/konfigurator/pkg/context"
+	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"time"
@@ -41,7 +42,8 @@ type PodMetadataInjectorReconciler struct {
 }
 
 const (
-	RequeTime = 120 * time.Second
+	RequeTime                    = 120 * time.Second
+	PodMetadataInjectorFinalizer = "konfigurator.stakater.com/PodMetadataInjector"
 )
 
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=podmetadatainjectors,verbs=get;list;watch;create;update;patch;delete
@@ -50,9 +52,9 @@ const (
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;
 
 func (r *PodMetadataInjectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("podmetadatainjector", req.NamespacedName)
+	log := r.Log.WithValues("PodMetadataInjector", req.NamespacedName)
 
-	log.Info("Reconciling podmetadatainjector: " + req.Name)
+	log.Info("Reconciling PodMetadataInjector: " + req.Name)
 	instance := &konfiguratorv1alpha1.PodMetadataInjector{}
 
 	err := r.Get(ctx, req.NamespacedName, instance)
@@ -65,11 +67,51 @@ func (r *PodMetadataInjectorReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 	// your logic here
 
+	// Resource is marked for deletion
+	if instance.DeletionTimestamp != nil {
+		log.Info("Deletion timestamp found for instance " + req.Name)
+		// Finalizer doesn't exist so clean up is already done
+		if !finalizerUtil.HasFinalizer(instance, PodMetadataInjectorFinalizer) {
+			return ctrl.Result{}, nil
+		}
+
+		if err := r.RemoveFromContext(ctx, instance); err!=nil{
+			return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		}
+		return ctrl.Result{}, nil
+	}
+	// Add finalizer if it doesn't exist
+	if !finalizerUtil.HasFinalizer(instance, PodMetadataInjectorFinalizer) {
+		log.Info("Adding finalizer " + req.Name)
+
+		finalizerUtil.AddFinalizer(instance, PodMetadataInjectorFinalizer)
+
+		err := r.Client.Update(ctx, instance)
+		if err != nil {
+			return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		}
+		return ctrl.Result{}, nil
+	}
+
 	if err := r.AddToContext(ctx, instance); err != nil {
 		return reconcilerUtil.RequeueWithError(err)
 	}
 
 	return reconcilerUtil.RequeueAfter(RequeTime)
+}
+
+func (r *PodMetadataInjectorReconciler) RemoveFromContext(ctx context.Context, injector *konfiguratorv1alpha1.PodMetadataInjector) error {
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList, client.MatchingLabels(injector.Labels)); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	for _, pod := range podList.Items {
+		r.RemoveOnePodFromContext(&pod)
+	}
+	return nil
 }
 
 func (r *PodMetadataInjectorReconciler) AddToContext(ctx context.Context, injector *konfiguratorv1alpha1.PodMetadataInjector) error {
@@ -101,6 +143,19 @@ func (r *PodMetadataInjectorReconciler) AddOnePodToContext(instance *corev1.Pod)
 	}
 	log.Info("Pod manifest appended in the xcontext:" + instance.Name)
 	r.Context.Pods = append(r.Context.Pods, *instance)
+}
+
+func (r *PodMetadataInjectorReconciler) RemoveOnePodFromContext(instance *corev1.Pod) {
+	log := r.Log.WithValues("podmetadatainjector", instance.Namespace)
+
+	for index, pod := range r.Context.Pods {
+		if pod.Name == instance.Name && pod.Namespace == instance.Namespace {
+			log.Info("Pod manifest removed from the xcontext:" + instance.Name)
+			r.Context.Pods = append(r.Context.Pods[:index], r.Context.Pods[index+1:]...)
+			return
+		}
+	}
+	return
 }
 
 // SetupWithManager sets up the controller with the Manager.
