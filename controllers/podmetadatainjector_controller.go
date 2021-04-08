@@ -50,7 +50,9 @@ const (
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;
 
 func (r *PodMetadataInjectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("podmetadatainjector", req.NamespacedName)
+	log := r.Log.WithValues("podmetadatainjector", req.NamespacedName)
+
+	log.Info("Reconciling podmetadatainjector: " + req.Name)
 	instance := &konfiguratorv1alpha1.PodMetadataInjector{}
 
 	err := r.Get(ctx, req.NamespacedName, instance)
@@ -88,12 +90,16 @@ func (r *PodMetadataInjectorReconciler) AddToContext(ctx context.Context, inject
 }
 
 func (r *PodMetadataInjectorReconciler) AddOnePodToContext(instance *corev1.Pod) {
+	log := r.Log.WithValues("podmetadatainjector", req.NamespacedName)
+
 	for index, pod := range r.Context.Pods {
 		if pod.Name == instance.Name && pod.Namespace == instance.Namespace {
 			r.Context.Pods[index] = *instance
+			log.Info("Pod manifest updated in the xcontext:" + req.Name)
 			return
 		}
 	}
+	log.Info("Pod manifest appended in the xcontext:" + req.Name)
 	r.Context.Pods = append(r.Context.Pods, *instance)
 }
 
