@@ -155,7 +155,6 @@ func (r *PodMetadataInjectorReconciler) RemoveOnePodFromContext(instance *corev1
 			return
 		}
 	}
-	return
 }
 
 // SetupWithManager sets up the controller with the Manager.
