@@ -83,11 +83,10 @@ type KonfiguratorTemplateReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	r.KContext = ctx
 	// your logic here
 
-	log := r.Log.WithValues("template", req.NamespacedName)
+	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info("Reconciling template: " + req.Name)
 	// Fetch the Tenant instance
 	instance := &v1alpha1.KonfiguratorTemplate{}
@@ -132,7 +131,7 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 }
 
 func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
-	log := r.Log.WithValues("template", req.NamespacedName)
+	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
 	log.Info("Rendering templates...")
@@ -157,7 +156,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 }
 
 func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
-	log := r.Log.WithValues("template", req.NamespacedName)
+	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating delete for KonfiguratorTemplate: %v", instance.Name))
 
 	// Delegate delete calls to controller
@@ -242,7 +241,7 @@ func (r *KonfiguratorTemplateReconciler) validateEngine(webhookURL string) error
 }
 
 func (r *KonfiguratorTemplateReconciler) CreateResources(name, namespace string, renderTarget v1alpha1.RenderTarget) error {
-	log := r.Log.WithValues("CreateResources", namespace)
+	log := r.Log.WithValues("konfiguratortemplate", namespace)
 	// Generate resource name
 	log.Info("CreateResources...")
 	resourceName := r.getGeneratedResourceName(name)
@@ -336,7 +335,7 @@ func (r *KonfiguratorTemplateReconciler) fetchAppObject(app v1alpha1.App, namesp
 }
 
 func (r *KonfiguratorTemplateReconciler) createConfigMap(name, namespace string) error {
-	log := r.Log.WithValues("createConfigMap", namespace)
+	log := r.Log.WithValues("konfiguratortemplate", namespace)
 	// Generate resource name
 	log.Info("createConfigMap...")
 	configmap := kube.CreateConfigMap(name)
@@ -357,6 +356,8 @@ func (r *KonfiguratorTemplateReconciler) createConfigMap(name, namespace string)
 }
 
 func (r *KonfiguratorTemplateReconciler) createSecret(name, namespace string) error {
+	log := r.Log.WithValues("konfiguratortemplate", namespace)
+	log.Info("createSecret...")
 	secret := kube.CreateSecret(name)
 	r.prepareResource(namespace, secret)
 

@@ -10,6 +10,7 @@ package controllers
 import (
 	"context"
 	xContext "github.com/stakater/konfigurator/pkg/context"
+	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
@@ -50,6 +51,7 @@ func TestPodAnnotationInject(t *testing.T) {
 	}
 	injector.SetAnnotations(testAnnotations)
 
+	finalizerUtil.AddFinalizer(injector, PodMetadataInjectorFinalizer)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TestPodName,
