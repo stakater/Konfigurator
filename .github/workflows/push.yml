@@ -54,13 +54,12 @@ jobs:
     - name: Login to Registry
       uses: docker/login-action@v1
       with:
-        registry: ${{ secrets.STAKATER_NEXUS_PROD_REGISTRY }}
-        username: ${{ secrets.STAKATER_NEXUS_PROD_USERNAME }}
-        password: ${{ secrets.STAKATER_NEXUS_PROD_PASSWORD }}
+        username: ${{ secrets.STAKATER_DOCKERHUB_USERNAME }}
+        password: ${{ secrets.STAKATER_DOCKERHUB_PASSWORD }}
 
     - name: Generate image repository path
       run: |
-        echo IMAGE_REPOSITORY=$(echo ${{ secrets.STAKATER_NEXUS_PROD_REGISTRY }}/${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
+        echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
 
     - name: Build and push
       uses: docker/build-push-action@v2
@@ -101,12 +100,27 @@ jobs:
     # Setting up helm binary
     - uses: azure/setup-helm@v1
 
-    # Publish helm chart to nexus
+    # # Publish helm chart to nexus
+    # - name: Publish Helm chart
+    #   run: |
+    #     helm package ./charts/konfigurator --destination ./packaged-chart
+    #     curl -u ${{ secrets.STAKATER_NEXUS_PROD_HELM_USERNAME }}:${{ secrets.STAKATER_NEXUS_PROD_HELM_PASSWORD }} ${{ secrets.STAKATER_NEXUS_PROD_HELM_REGISTRY }} --upload-file ./packaged-chart/*.tgz
+    #     rm -rf ./packaged-chart
+
+    # Publish helm chart
     - name: Publish Helm chart
-      run: |
-        helm package ./charts/konfigurator --destination ./packaged-chart
-        curl -u ${{ secrets.STAKATER_NEXUS_PROD_HELM_USERNAME }}:${{ secrets.STAKATER_NEXUS_PROD_HELM_PASSWORD }} ${{ secrets.STAKATER_NEXUS_PROD_HELM_REGISTRY }} --upload-file ./packaged-chart/*.tgz
-        rm -rf ./packaged-chart
+      uses: stefanprodan/helm-gh-pages@master
+      with:
+        branch: master
+        repository: stakater-charts
+        target_dir: docs
+        token: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        charts_dir: charts
+        charts_url: https://stakater.github.io/stakater-charts
+        owner: stakater
+        linting: off
+        commit_username: stakater-user
+        commit_email: stakater@gmail.com
 
     # Commit back changes
     - name: Commit files
