@@ -39,7 +39,7 @@ helm install stakater/konfigurator
 
 Once Konfigurator is running, you can start creating resources supported by it. For details about its custom resources, look [here](https://github.com/stakater/Konfigurator/tree/master/docs/konfigurator-template.md).
 
-To make Konfigurator work globally, you would have to change the `WATCH_NAMESPACE` environment variable to "" in values.yaml. e.g. change `WWATCH_NAMESPACE` section to:
+To make Konfigurator work globally, you would have to change the `WATCH_NAMESPACE` environment variable to "" in values.yaml. e.g. change `WATCH_NAMESPACE` section to:
 
 ```yaml
   env:
