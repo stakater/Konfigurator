@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
@@ -26,7 +27,7 @@ import (
 
 	xContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
-	"k8s.io/api/extensions/v1beta1"
+	v1 "k8s.io/api/networking/v1"
 )
 
 // IngressReconciler reconciles a KonfiguratorTemplate object
@@ -36,14 +37,14 @@ type IngressReconciler struct {
 	Context *xContext.Context
 }
 
-// +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch;
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;
 
 func (r *IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("ingress", req.NamespacedName)
 	// log := r.Log.WithValues("ingress", req.NamespacedName)
 	// log.Info("Reconciling ingress: " + req.Name)
 	// Fetch the ingress instance
-	instance := &v1beta1.Ingress{}
+	instance := &v1.Ingress{}
 
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -87,7 +88,7 @@ func (r *IngressReconciler) RemoveFromContext(name, namespace string) error {
 	return nil
 }
 
-func (r *IngressReconciler) AddToContext(instance *v1beta1.Ingress) error {
+func (r *IngressReconciler) AddToContext(instance *v1.Ingress) error {
 	for index, ingress := range r.Context.Ingresses {
 		if ingress.Name == instance.Name && ingress.Namespace == instance.Namespace {
 			// Update the resource
@@ -100,6 +101,6 @@ func (r *IngressReconciler) AddToContext(instance *v1beta1.Ingress) error {
 }
 func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1beta1.Ingress{}).
+		For(&v1.Ingress{}).
 		Complete(r)
 }
