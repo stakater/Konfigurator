@@ -75,7 +75,7 @@ func (r *PodMetadataInjectorReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{}, nil
 		}
 
-		if err := r.RemoveFromContext(ctx, instance); err!=nil{
+		if err := r.RemoveFromContext(ctx, instance); err != nil {
 			return reconcilerUtil.ManageError(r.Client, instance, err, false)
 		}
 		return ctrl.Result{}, nil

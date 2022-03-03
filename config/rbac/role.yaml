@@ -49,14 +49,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - extensions
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - konfigurator.stakater.com
   resources:
   - konfiguratortemplates
@@ -102,3 +94,11 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch

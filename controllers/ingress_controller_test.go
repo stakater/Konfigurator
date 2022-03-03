@@ -9,14 +9,16 @@ package controllers
 
 import (
 	"context"
+
 	xContext "github.com/stakater/konfigurator/pkg/context"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"testing"
+
 	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
-	extensionv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,7 +37,7 @@ func TestIngressCache(t *testing.T) {
 	// 1. Prepare Test data
 	// 1.1 Make test objects, injector and pod
 
-	ingress := &extensionv1beta1.Ingress{
+	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TestIngressName,
 			Namespace: TestNamespace,
