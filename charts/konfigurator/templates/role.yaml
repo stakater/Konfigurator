@@ -16,6 +16,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - "*"
+  - Ingress
   verbs:
-  - "*"
+  - get
