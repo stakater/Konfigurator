@@ -17,5 +17,6 @@ rules:
   - ""
   resources:
   - Ingress
+  - namespaces
   verbs:
   - get
