@@ -16,7 +16,8 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - Ingress
-  - namespaces
+  - events
   verbs:
   - get
+  - create
+  - update
