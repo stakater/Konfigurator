@@ -13,3 +13,6 @@ rules:
   - "*"
   verbs:
   - "*"
+  events:
+- apiGroups:
+  - ""
