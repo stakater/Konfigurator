@@ -37,7 +37,7 @@ jobs:
 
     - name: Generate Tag
       id: generate_tag
-      uses: anothrNick/github-tag-action@1.26.0
+      uses: anothrNick/github-tag-action@1.39.0
       env:
         GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
         WITH_V: true
