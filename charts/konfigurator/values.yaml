@@ -1,6 +1,5 @@
 deployCRD: false
 
-namespace: dsadakdaskjhdkjashdh
 
 labels:
   provider: stakater
