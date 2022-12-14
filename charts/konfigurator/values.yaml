@@ -1,5 +1,7 @@
 deployCRD: false
 
+namespace: dsadakdaskjhdkjashdh
+
 labels:
   provider: stakater
   group: com.stakater.platform
