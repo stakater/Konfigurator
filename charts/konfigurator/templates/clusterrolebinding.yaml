@@ -5,12 +5,12 @@ metadata:
   labels:
   {{- include "konfigurator.labels.stakater" . | nindent 4 }}
   {{- include "konfigurator.labels.chart" . | nindent 4 }}
-  name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role-binding
+  name: {{ template "konfigurator.name" . }}-{{ .Values.namespace | default .Release.Namespace }}-cluster-role-binding
 subjects:
 - kind: ServiceAccount
   name: {{ template "konfigurator.name" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: {{ template "konfigurator.name" . }}-{{ .Release.Namespace }}-cluster-role
+  name: {{ template "konfigurator.name" . }}-{{ .Values.namespace | default .Release.Namespace }}-cluster-role
   apiGroup: rbac.authorization.k8s.io

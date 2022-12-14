@@ -1,5 +1,6 @@
 deployCRD: false
 
+
 labels:
   provider: stakater
   group: com.stakater.platform

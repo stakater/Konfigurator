@@ -6,6 +6,7 @@ metadata:
 {{- include "konfigurator.labels.stakater" . | nindent 4 }}
 {{- include "konfigurator.labels.chart" . | nindent 4 }}
   name: {{ template "konfigurator.name" . }}-role
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
 rules:
 - apiGroups:
   - konfigurator.stakater.com
