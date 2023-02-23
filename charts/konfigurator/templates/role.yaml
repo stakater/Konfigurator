@@ -22,3 +22,41 @@ rules:
   - get
   - create
   - update
+---
+# Manage konfiguratortemplates Custom Resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+{{- include "konfigurator.labels.stakater" . | nindent 4 }}
+{{- include "konfigurator.labels.chart" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: konfigurator-aggregate-to-edit
+rules:
+  - apiGroups:
+      - konfigurator.stakater.com
+    resources:
+      - konfiguratortemplates
+      - podmetadatainjector
+    verbs:
+      - "*"
+---
+# View konfiguratortemplates Custom Resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+{{- include "konfigurator.labels.stakater" . | nindent 4 }}
+{{- include "konfigurator.labels.chart" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  name: konfigurator-aggregate-to-view
+rules:
+  - apiGroups:
+      - konfigurator.stakater.com
+    resources:
+      - konfiguratortemplates
+      - podmetadatainjector
+    verbs:
+      - get
+      - list
+      - watch
