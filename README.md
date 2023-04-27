@@ -83,14 +83,13 @@ View our closed [Pull Requests](https://github.com/stakater/Konfigurator/pulls?q
 
 ## License
 
-Apache2 © [Stakater](http://stakater.com)
+Apache2 © [Stakater][website]
 
 ## About
 
 `Konfigurator` is maintained by [Stakater][website]. Like it? Please let us know at <hello@stakater.com>
 
-See [our other projects][community]
+See [our other projects](https://github.com/stakater)
 or contact us in case of professional services and queries on <hello@stakater.com>
 
-  [website]: http://stakater.com/
-  [community]: https://github.com/stakater/
+  [website]: https://stakater.com
