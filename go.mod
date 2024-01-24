@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/fatih/structs v1.1.0
 	github.com/go-logr/logr v0.4.0
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stakater/operator-utils v0.1.14
