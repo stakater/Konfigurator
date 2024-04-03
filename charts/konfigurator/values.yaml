@@ -14,7 +14,7 @@ replicaCount: 1
 
 image:
   repository: stakater/konfigurator
-  tag:  v0.1.31
+  tag:  v0.1.32
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
