@@ -10,18 +10,18 @@ env:
   GOLANG_VERSION: 1.17.7
   OPERATOR_SDK_VERSION: "1.2.0"
   KUSTOMIZE_VERSION: "3.5.4"
+  CONTAINER_REGISTRY_URL: ghcr.io/stakater
 
 jobs:
   build:
     name: Build
     if: "! contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Check out code
       uses: actions/checkout@v4
       with:
-        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
         fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
 
     - name: Set up Go
@@ -39,12 +39,12 @@ jobs:
       id: generate_tag
       uses: anothrNick/github-tag-action@1.71.0
       env:
-        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
         WITH_V: true
         DEFAULT_BUMP: patch
         RELEASE_BRANCHES: master
         DRY_RUN: true
-    
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -54,12 +54,13 @@ jobs:
     - name: Login to Registry
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.STAKATER_DOCKERHUB_USERNAME }}
-        password: ${{ secrets.STAKATER_DOCKERHUB_PASSWORD }}
+        registry: ${{ env.CONTAINER_REGISTRY_URL }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_TOKEN }}
 
     - name: Generate image repository path
       run: |
-        echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
+        echo IMAGE_REPOSITORY=$(echo ${{ env.CONTAINER_REGISTRY_URL }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
 
     - name: Build and push
       uses: docker/build-push-action@v6
@@ -68,13 +69,12 @@ jobs:
         file: ${{ env.DOCKER_FILE_PATH  }}
         pull: true
         push: true
-        build-args: GIT_ACCESS_TOKEN=${{ secrets.STAKATER_GITHUB_TOKEN }}
+        build-args: GIT_ACCESS_TOKEN=${{ secrets.PUBLISH_TOKEN }}
         cache-to: type=inline
         tags: |
           ${{ env.IMAGE_REPOSITORY }}:${{ steps.generate_tag.outputs.new_tag }}
         labels: |
           org.opencontainers.image.source=${{ github.event.repository.clone_url }}
-          org.opencontainers.image.created=${{ steps.prep.outputs.created }}
           org.opencontainers.image.revision=${{ github.sha }}
 
     # Generate tag for operator without "v"
@@ -82,7 +82,7 @@ jobs:
       id: generate_operator_tag
       uses: anothrNick/github-tag-action@1.71.0
       env:
-        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
         WITH_V: false
         DEFAULT_BUMP: patch
         RELEASE_BRANCHES: master
@@ -93,19 +93,12 @@ jobs:
       env:
         VERSION: ${{ steps.generate_operator_tag.outputs.new_tag }}
       run: make bump-chart
-    
+
     - name: Update Chart CRDs
       run: make manifests
-      
+
     # Setting up helm binary
     - uses: azure/setup-helm@v4
-
-    # # Publish helm chart to nexus
-    # - name: Publish Helm chart
-    #   run: |
-    #     helm package ./charts/konfigurator --destination ./packaged-chart
-    #     curl -u ${{ secrets.STAKATER_NEXUS_PROD_HELM_USERNAME }}:${{ secrets.STAKATER_NEXUS_PROD_HELM_PASSWORD }} ${{ secrets.STAKATER_NEXUS_PROD_HELM_REGISTRY }} --upload-file ./packaged-chart/*.tgz
-    #     rm -rf ./packaged-chart
 
     # Publish helm chart
     - name: Publish Helm chart
@@ -114,9 +107,9 @@ jobs:
         branch: master
         repository: stakater-charts
         target_dir: docs
-        token: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        token: ${{ secrets.PUBLISH_TOKEN }}
         charts_dir: charts
-        charts_url: https://stakater.github.io/stakater-charts
+        charts_url: ${{ secrets.HELM_REGISTRY_URL }}
         owner: stakater
         linting: off
         commit_username: stakater-user
@@ -127,18 +120,20 @@ jobs:
       run: |
         git config --local user.email "github-root@stakater.com"
         git config --local user.name "stakater-github-root"
-        git status 
+        git status
         git add .
         git commit -m "[skip-ci] Update artifacts" -a
+
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
-        github_token: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        github_token: ${{ secrets.PUBLISH_TOKEN }}
         branch: master
+
     - name: Push Latest Tag
       uses: anothrNick/github-tag-action@1.71.0
       env:
-        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
         WITH_V: true
         RELEASE_BRANCHES: master
         DEFAULT_BUMP: patch
@@ -150,5 +145,4 @@ jobs:
         status: ${{ job.status }}
         fields: repo,author,action,eventName,ref,workflow
       env:
-        GITHUB_TOKEN: ${{ secrets.STAKATER_GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.STAKATER_DELIVERY_SLACK_WEBHOOK }}
