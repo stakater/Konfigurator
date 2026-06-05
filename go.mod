@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.6.0
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stakater/operator-utils v0.1.14
 	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.2
@@ -62,7 +62,7 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.21.2 // indirect
 	k8s.io/component-base v0.21.2 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
