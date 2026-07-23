@@ -98,7 +98,7 @@ jobs:
       run: make manifests
 
     # Setting up helm binary
-    - uses: azure/setup-helm@v4
+    - uses: azure/setup-helm@v5
 
     # Publish helm chart
     - name: Publish Helm chart
