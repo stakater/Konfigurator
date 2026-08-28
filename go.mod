@@ -1,6 +1,6 @@
 module github.com/stakater/konfigurator
 
-go 1.17
+go 1.25
 
 require (
 	github.com/fatih/structs v1.1.0
@@ -8,7 +8,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stakater/operator-utils v0.1.14
+	github.com/stakater/operator-utils v0.1.15
 	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
