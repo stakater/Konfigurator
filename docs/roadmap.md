@@ -59,7 +59,7 @@ itself, so that a template created before its Deployment doesn't stay stuck sile
 **Done:** transient errors requeue with backoff; `.status.conditions` carries `Ready`/`Error`
 plus `observedGeneration`; tests cover the "app not found yet" case.
 
-### H.7 — Toolchain, dependencies, `make verify` in CI (M1–M4) — 📝 Draft
+### H.7 — Toolchain, dependencies, `make verify` in CI (M1–M4) — 🔨 In progress (👍 2026-11-17) · [plan](planning/H.7-toolchain-deps-verify.md)
 As a **maintainer**, I want the operator built on a supported Go and Kubernetes stack, with
 lint and vuln scans in CI, so that we stop shipping known CVEs and broken tooling.
 **Done:** a supported Go version in `go.mod`, the Dockerfile, and CI; k8s, controller-runtime,
