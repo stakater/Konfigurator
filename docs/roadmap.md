@@ -24,7 +24,7 @@ so that one tenant's typo can't crash-loop Konfigurator for everyone.
 error instead of `nil`; `RecoverPanic` is on; a table test covers the unknown kind and the
 invalid render target (including a delete that doesn't hang).
 
-### H.2 — Safe validation webhook (S2) — 🔨 In progress (👍 2026-11-17) · [plan](planning/H.2-safe-validation-webhook.md)
+### H.2 — Safe validation webhook (S2) — ✅ Done 2026-11-17 · [plan](planning/H.2-safe-validation-webhook.md)
 As a **platform operator**, I want webhook calls to be bounded and limited to destinations I
 approve, so that templates can't be used for SSRF, exfiltration, or stalling the operator.
 **Done:** an HTTP client with a timeout and a response-size cap; the call uses `ctx`; the

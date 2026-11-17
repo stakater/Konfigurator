@@ -17,17 +17,14 @@ limitations under the License.
 package controllers
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/stakater/konfigurator/pkg/kube"
 	"github.com/stakater/konfigurator/pkg/template"
+	"github.com/stakater/konfigurator/pkg/webhook"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -48,13 +45,7 @@ const (
 	TemplateFinalizer     string = "konfigurator.stakater.com/konfiguratortemplate"
 	GeneratedByAnnotation string = "konfigurator.stakater.com/generated-by"
 	DefaultRequeueTime           = 120 * time.Second
-	ValidationRequestKey  string = "template"
 )
-
-type ValidateResponse struct {
-	Allowed bool   `json:"allowed"`
-	Message string `json:"message"`
-}
 
 // KonfiguratorTemplateReconciler reconciles a KonfiguratorTemplate object
 type KonfiguratorTemplateReconciler struct {
@@ -64,6 +55,9 @@ type KonfiguratorTemplateReconciler struct {
 	RenderedTemplates map[string]string
 	XContext          *xContext.Context
 	KContext          context.Context
+	// Webhook validates rendered output against spec.validationWebhookURL, limited to
+	// admin-allowed hosts. Nil denies all webhook calls (H.2).
+	Webhook *webhook.Validator
 }
 
 // +kubebuilder:rbac:groups=konfigurator.stakater.com,resources=konfiguratortemplates,verbs=get;list;watch;create;update;patch;delete
@@ -137,7 +131,7 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
 	log.Info("Rendering templates...")
-	if err := r.RenderTemplates(req, instance); err != nil {
+	if err := r.RenderTemplates(ctx, req, instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
@@ -192,7 +186,7 @@ func (r *KonfiguratorTemplateReconciler) getGeneratedResourceName(name string) s
 	return strings.ToLower("konfigurator-" + name + "-rendered")
 }
 
-func (r *KonfiguratorTemplateReconciler) RenderTemplates(req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) error {
+func (r *KonfiguratorTemplateReconciler) RenderTemplates(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) error {
 	log := r.Log.WithValues("KonfiguratorTemplate", req.NamespacedName)
 	log.Info("RenderTemplates...")
 	templates := instance.Spec.Templates
@@ -207,43 +201,16 @@ func (r *KonfiguratorTemplateReconciler) RenderTemplates(req ctrl.Request, insta
 		}
 		r.RenderedTemplates[fileName] = string(rendered)
 	}
-	return r.validateEngine(instance.Spec.ValidationWebhookURL)
+	return r.validateEngine(ctx, instance.Spec.ValidationWebhookURL)
 }
 
-func (r *KonfiguratorTemplateReconciler) validateEngine(webhookURL string) error {
+// validateEngine sends the rendered output to the template's validation webhook,
+// if one is set, through the admin-configured Validator (H.2, review S2).
+func (r *KonfiguratorTemplateReconciler) validateEngine(ctx context.Context, webhookURL string) error {
 	if webhookURL == "" {
 		return nil
 	}
-	parsedUrl, err := url.ParseRequestURI(webhookURL)
-	if err != nil {
-		return err
-	}
-	//type ValidationRequest struct {
-	//	Template map[string]string `json:"template"`
-	//}
-	//validationRequest := &ValidationRequest{
-	//	Template: r.RenderedTemplates,
-	//}
-
-	jsonData, err := json.Marshal(r.RenderedTemplates)
-	if err != nil {
-		return fmt.Errorf("Validation request serialization failed: %s", err.Error())
-	}
-
-	resp, err := http.Post(parsedUrl.String(), "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("Validation request failed: %s", err.Error())
-	}
-	defer resp.Body.Close()
-	var res ValidateResponse
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return fmt.Errorf("Validation response decoding failed: %s", err.Error())
-	}
-
-	if !res.Allowed {
-		return fmt.Errorf("Template is invalid: %s", res.Message)
-	}
-	return nil
+	return r.Webhook.Validate(ctx, webhookURL, r.RenderedTemplates)
 }
 
 func (r *KonfiguratorTemplateReconciler) CreateResources(name, namespace string, renderTarget v1alpha1.RenderTarget) error {

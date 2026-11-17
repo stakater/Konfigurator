@@ -34,6 +34,7 @@ import (
 	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/controllers"
 	xContext "github.com/stakater/konfigurator/pkg/context"
+	"github.com/stakater/konfigurator/pkg/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -89,6 +90,7 @@ func main() {
 		Log:      ctrl.Log.WithName("controllers").WithName("KonfiguratorTemplate"),
 		Scheme:   mgr.GetScheme(),
 		XContext: &resourceContext,
+		Webhook:  newWebhookValidator(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KonfiguratorTemplate")
 		os.Exit(1)
@@ -145,6 +147,18 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// newWebhookValidator builds the template validation-webhook client from operator
+// config. With no allowed hosts, every validationWebhookURL is refused (H.2).
+func newWebhookValidator() *webhook.Validator {
+	hosts := webhook.ParseAllowedHosts(os.Getenv(webhook.AllowedHostsEnv))
+	if len(hosts) == 0 {
+		setupLog.Info("validation webhooks disabled: " + webhook.AllowedHostsEnv + " is empty")
+	} else {
+		setupLog.Info("validation webhooks enabled", "allowedHosts", hosts)
+	}
+	return &webhook.Validator{AllowedHosts: hosts}
 }
 
 func getWatchNamespace() string {

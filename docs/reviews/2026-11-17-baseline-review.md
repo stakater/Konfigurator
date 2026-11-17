@@ -133,7 +133,7 @@ cross-namespace visibility an explicit opt-in controlled by the operator admin (
 a namespace allow-list in operator config, never in the CR). Redact `env` values and drop
 `managedFields`.
 
-### 🔴 S2. The validation webhook is an SSRF and exfiltration channel with no timeout. *Confirmed*
+### 🔴 S2. The validation webhook is an SSRF and exfiltration channel with no timeout. *Confirmed* — ✅ **closed by H.2** (residual: no DNS-rebinding defense; allow-list is exact-host)
 `konfiguratortemplate_controller.go:227`. `http.Post` to `spec.validationWebhookURL`, which
 comes from the user:
 - **SSRF:** the operator's network identity (in-cluster, often privileged egress) POSTs to

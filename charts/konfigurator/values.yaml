@@ -12,6 +12,13 @@ env:
       fieldPath: metadata.namespace
 replicaCount: 1
 
+# Hosts a KonfiguratorTemplate's spec.validationWebhookURL may call, as exact
+# "host" or "host:port" entries (e.g. my-validator.my-ns.svc). Empty = validation
+# webhooks disabled: templates that set validationWebhookURL fail to render.
+# Set by the cluster admin, never by template authors (SSRF protection).
+validationWebhook:
+  allowedHosts: []
+
 image:
   repository: stakater/konfigurator
   tag:  v0.1.39

@@ -34,6 +34,10 @@ spec:
           env:
           - name: OPERATOR_NAME
             value: "{{ template "konfigurator.name" . }}"
+          {{- with .Values.validationWebhook.allowedHosts }}
+          - name: VALIDATION_WEBHOOK_ALLOWED_HOSTS
+            value: {{ join "," . | quote }}
+          {{- end }}
 {{ toYaml .Values.env | indent 10 }}
       serviceAccountName: {{ template "konfigurator.name" . }}
       securityContext:
