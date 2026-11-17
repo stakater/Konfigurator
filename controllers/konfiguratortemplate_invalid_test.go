@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 )
 
 func newTemplateReconciler(objs ...runtime.Object) (*KonfiguratorTemplateReconciler, client.Client) {

@@ -25,7 +25,7 @@ func TestAssignValueTo(t *testing.T) {
 
 	volumeFound := false
 	for _, updatedVolume := range updatedVolumes {
-		if updatedVolume.Name == volumeName && updatedVolume.VolumeSource.Secret.SecretName == secretName {
+		if updatedVolume.Name == volumeName && updatedVolume.Secret.SecretName == secretName {
 			volumeFound = true
 			break
 		}

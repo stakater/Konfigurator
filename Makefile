@@ -1,144 +1,145 @@
-# VERSION defines the project version for the bundle. 
-# Update this value when you upgrade the version of your project.
-# To re-generate a bundle for another specific version without changing the standard setup, you can:
-# - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
-# - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
+# VERSION defines the project version for the bundle and image.
+# Override on the command line, e.g. `make bundle VERSION=0.0.2`.
 VERSION ?= 0.0.1
 
-# CHANNELS define the bundle channels used in the bundle. 
-# Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
-# To re-generate a bundle for other specific channels without changing the standard setup, you can:
-# - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=preview,fast,stable)
-# - use environment variables to overwrite this value (e.g export CHANNELS="preview,fast,stable")
+# CHANNELS / DEFAULT_CHANNEL configure the OLM bundle (see `make bundle`).
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
-
-# DEFAULT_CHANNEL defines the default channel used in the bundle. 
-# Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "stable")
-# To re-generate a bundle for any other default channel without changing the default setup, you can:
-# - use the DEFAULT_CHANNEL as arg of the bundle target (e.g make bundle DEFAULT_CHANNEL=stable)
-# - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
 ifneq ($(origin DEFAULT_CHANNEL), undefined)
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
-
-# BUNDLE_IMG defines the image:tag used for the bundle. 
-# You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= stakater/konfigurator:v$(VERSION)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+## Pinned tool versions (H.7). Tools install into ./bin (gitignored) with `go install`.
+LOCALBIN ?= $(shell pwd)/bin
+CONTROLLER_TOOLS_VERSION ?= v0.23.0
+GOLANGCI_LINT_VERSION    ?= v2.15.0
+GOVULNCHECK_VERSION      ?= v1.10.0
+KIND_VERSION             ?= v0.32.0
+KUSTOMIZE_VERSION        ?= v5.8.3
 
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+GOLANGCI_LINT  ?= $(LOCALBIN)/golangci-lint
+GOVULNCHECK    ?= $(LOCALBIN)/govulncheck
+KIND           ?= $(LOCALBIN)/kind
+KUSTOMIZE      ?= $(LOCALBIN)/kustomize
+
+CHART_CRDS := charts/konfigurator/templates/crd.yaml
+
+.PHONY: all
 all: manager
 
-# Run tests
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: generate fmt vet manifests
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+##@ Development
 
-# Unit-test
-unit-test:
-	go test ./...
+.PHONY: manifests
+manifests: controller-gen ## Generate CRDs and RBAC from +kubebuilder markers, and sync the chart's CRD copy.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(MAKE) chart-crds
 
-# Build manager binary
-manager: generate fmt vet lint helm-lint
+.PHONY: chart-crds
+chart-crds: ## Copy the generated CRDs into the Helm chart (installed only when deployCRD=true).
+	@{ echo '{{- if .Values.deployCRD }}'; cat config/crd/bases/*.yaml; echo '{{- end }}'; } > $(CHART_CRDS)
+
+.PHONY: generate
+generate: controller-gen ## Generate deepcopy code.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: codegen-check
+codegen-check: generate manifests ## Fail if generated code/manifests are out of date.
+	@git diff --exit-code -- api config $(CHART_CRDS) || { echo "generated files are stale: run 'make generate manifests' and commit"; exit 1; }
+
+.PHONY: fmt
+fmt: ## Format the code.
+	go fmt ./...
+
+.PHONY: fmt-check
+fmt-check: ## Fail on unformatted Go files.
+	@out="$$(gofmt -l $$(git ls-files '*.go'))"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
+
+.PHONY: vet
+vet: ## Run go vet.
+	go vet ./...
+
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint (config: .golangci.yml).
+	$(GOLANGCI_LINT) run --timeout=10m ./...
+
+.PHONY: test
+test: ## Run unit tests with the race detector.
+	go test -race -count=1 ./...
+
+.PHONY: unit-test
+unit-test: test
+
+# Definition of Done gate (docs/method.md). Run by the Claude Code PostToolUse hook
+# (hack/verify-hook.sh) after every Go edit, and in CI.
+.PHONY: verify
+verify: fmt-check vet ## fmt-check, vet, build, lint, test.
+	go build ./...
+	$(MAKE) lint
+	$(MAKE) test
+
+.PHONY: vulncheck
+vulncheck: govulncheck ## Report reachable known vulnerabilities.
+	$(GOVULNCHECK) ./...
+
+.PHONY: e2e
+e2e: kind ## Smoke-test the real image + chart on a throwaway kind cluster.
+	KIND=$(KIND) test/e2e/smoke.sh
+
+##@ Build
+
+.PHONY: manager
+manager: generate fmt vet lint helm-lint ## Build the manager binary.
 	go build -o bin/manager main.go
 
-# Lint
-lint:
-	golangci-lint run --timeout=10m ./...
-
-# Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests lint helm-lint
+.PHONY: run
+run: generate fmt vet manifests ## Run against the cluster in ~/.kube/config.
 	go run ./main.go
 
-# Install CRDs into a cluster
-install: manifests kustomize
+.PHONY: docker-build
+docker-build: test ## Build the docker image.
+	docker build -t ${IMG} .
+
+.PHONY: docker-push
+docker-push: ## Push the docker image.
+	docker push ${IMG}
+
+.PHONY: helm-lint
+helm-lint: ## Lint the Helm chart.
+	if [ -d charts ]; then helm lint charts/konfigurator; fi
+
+.PHONY: bump-chart
+bump-chart: ## Set chart version/appVersion/image tag to $(VERSION) (used by CI).
+	sed -i "s/^version:.*/version:  $(VERSION)/" charts/konfigurator/Chart.yaml
+	sed -i "s/^appVersion:.*/appVersion:  $(VERSION)/" charts/konfigurator/Chart.yaml
+	sed -i "s/tag:.*/tag:  v$(VERSION)/" charts/konfigurator/values.yaml
+
+##@ Deployment (kustomize)
+
+.PHONY: install
+install: manifests kustomize ## Install CRDs into the cluster in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-# Uninstall CRDs from a cluster
-uninstall: manifests kustomize
+.PHONY: uninstall
+uninstall: manifests kustomize ## Uninstall CRDs.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests kustomize
+.PHONY: deploy
+deploy: manifests kustomize ## Deploy the controller via kustomize.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
-# UnDeploy controller from the configured Kubernetes cluster in ~/.kube/config
-undeploy:
+.PHONY: undeploy
+undeploy: kustomize ## Undeploy the controller.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-# Run go fmt against code
-fmt:
-	go fmt ./...
-
-# Run go vet against code
-vet:
-	go vet ./...
-
-# Generate code
-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
-# Build the docker image
-docker-build: test
-	docker build -t ${IMG} .
-
-# Push the docker image
-docker-push:
-	docker push ${IMG}
-
-# Download controller-gen locally if necessary
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
-
-kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
-
-# Generate bundle manifests and metadata, then validate generated files.
+# OLM bundle targets: unchanged legacy scaffolding, not exercised in CI (H.7 plan, out of scope).
 .PHONY: bundle
 bundle: manifests kustomize
 	operator-sdk generate kustomize manifests -q
@@ -146,28 +147,38 @@ bundle: manifests kustomize
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
-# Build the bundle image.
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
-bump-chart:
-	sed -i "s/^version:.*/version:  $(VERSION)/" charts/konfigurator/Chart.yaml
-	sed -i "s/^appVersion:.*/appVersion:  $(VERSION)/" charts/konfigurator/Chart.yaml
-	sed -i "s/tag:.*/tag:  v$(VERSION)/" charts/konfigurator/values.yaml
+##@ Tools (pinned; reinstalled when the version changes)
 
-helm-lint:
-	if [ -d charts ]; then helm lint charts/konfigurator; fi
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
-# Definition of Done gate (docs/method.md). Run by the Claude Code PostToolUse hook
-# (hack/verify-hook.sh) after every Go edit, and expected green before a PR.
-# Lint is skipped (loudly) until golangci-lint + config land with roadmap story H.7.
-.PHONY: verify fmt-check
-verify: fmt-check vet
-	go build ./...
-	go test -race -count=1 ./...
-	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run --timeout=10m ./...; \
-	else echo "WARNING verify: golangci-lint not installed - lint SKIPPED (story H.7)" >&2; fi
+# go-install-tool installs $(2)@$(3) as $(1), versioned so a version bump reinstalls.
+define go-install-tool
+@[ -f "$(1)-$(3)" ] || { \
+	set -e; \
+	echo "Installing $(2)@$(3)"; \
+	GOBIN=$(LOCALBIN) go install $(2)@$(3); \
+	mv "$(LOCALBIN)/$$(basename $(1))" "$(1)-$(3)"; \
+}; \
+ln -sf "$$(basename $(1))-$(3)" "$(1)"
+endef
 
-fmt-check:
-	@out="$$(gofmt -l $$(git ls-files '*.go'))"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
+.PHONY: controller-gen golangci-lint govulncheck kind kustomize
+controller-gen: $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+golangci-lint: $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+govulncheck: $(LOCALBIN)
+	$(call go-install-tool,$(GOVULNCHECK),golang.org/x/vuln/cmd/govulncheck,$(GOVULNCHECK_VERSION))
+kind: $(LOCALBIN)
+	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
+kustomize: $(LOCALBIN)
+	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
+
+.PHONY: help
+help: ## Show this help.
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-16s %s\n", $$1, $$2 } /^##@/ { printf "\n%s\n", substr($$0, 5) }' $(MAKEFILE_LIST)

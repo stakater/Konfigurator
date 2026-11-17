@@ -9,15 +9,18 @@ package controllers
 
 import (
 	"context"
+
 	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/types"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

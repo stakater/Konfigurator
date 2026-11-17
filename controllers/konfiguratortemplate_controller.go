@@ -19,26 +19,30 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/stakater/konfigurator/pkg/kube"
-	"github.com/stakater/konfigurator/pkg/template"
-	"github.com/stakater/konfigurator/pkg/webhook"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/stakater/konfigurator/pkg/kube"
+	"github.com/stakater/konfigurator/pkg/template"
+	"github.com/stakater/konfigurator/pkg/webhook"
+
 	"github.com/go-logr/logr"
-	k8sutils "github.com/stakater/konfigurator/pkg/utils/k8s"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	k8sutils "github.com/stakater/konfigurator/pkg/utils/k8s"
+
+	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
+	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
+
 	v1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	xContext "github.com/stakater/konfigurator/pkg/context"
 	"github.com/stakater/konfigurator/pkg/kube/mounts"
-	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
-	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 )
 
 const (
@@ -117,7 +121,7 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 
 		finalizerUtil.AddFinalizer(instance, TemplateFinalizer)
 
-		err := r.Client.Update(ctx, instance)
+		err := r.Update(ctx, instance)
 		if err != nil {
 			return reconcilerUtil.ManageError(r.Client, instance, err, false)
 		}
@@ -174,7 +178,7 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 
 	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
 	// Update instance
-	if err := r.Client.Update(ctx, instance); err != nil {
+	if err := r.Update(ctx, instance); err != nil {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 	log.Info(fmt.Sprintf("Deleted KonfiguratorTemplate: %v", instance.Name))
@@ -235,7 +239,7 @@ func (r *KonfiguratorTemplateReconciler) MountVolumes(instance *v1alpha1.Konfigu
 		func(mountManager *mounts.MountManager) error {
 			err := mountManager.MountVolumes(instance.Spec.App.VolumeMounts)
 			if err != nil {
-				return fmt.Errorf("Failed to assign volume mounts to the specified resource: %v", err)
+				return fmt.Errorf("failed to assign volume mounts to the specified resource: %w", err)
 			}
 
 			return nil
@@ -249,7 +253,7 @@ func (r *KonfiguratorTemplateReconciler) UnmountVolumes(instance *v1alpha1.Konfi
 		func(mountManager *mounts.MountManager) error {
 			err := mountManager.UnmountVolumes()
 			if err != nil && !errors.IsNotFound(err) {
-				return fmt.Errorf("Failed to unmount volume mounts from the specified resource: %v", err)
+				return fmt.Errorf("failed to unmount volume mounts from the specified resource: %w", err)
 			}
 			return nil
 		},
@@ -263,7 +267,7 @@ func (r *KonfiguratorTemplateReconciler) DeleteResources(renderTarget v1alpha1.R
 	case v1alpha1.RenderTargetSecret:
 		return r.deleteSecret(name, namespace)
 	}
-	return fmt.Errorf("Invalid render target in KonfiguratorTemplate %v", renderTarget)
+	return fmt.Errorf("invalid render target in KonfiguratorTemplate %v", renderTarget)
 }
 
 func (r *KonfiguratorTemplateReconciler) handleVolumes(instance *v1alpha1.KonfiguratorTemplate, handleVolumesFunc func(*mounts.MountManager) error) error {
@@ -379,5 +383,5 @@ func (r *KonfiguratorTemplateReconciler) prepareResource(namespace string, resou
 func (r *KonfiguratorTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.KonfiguratorTemplate{}).
-		Complete(recoverPanics(r, r.Log))
+		Complete(r)
 }

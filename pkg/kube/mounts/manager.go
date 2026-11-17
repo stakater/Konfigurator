@@ -2,13 +2,15 @@ package mounts
 
 import (
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/pkg/kube/lists/containers"
 	"github.com/stakater/konfigurator/pkg/kube/lists/volumes"
 	objectVolume "github.com/stakater/konfigurator/pkg/kube/objects/volume"
 	kubereflect "github.com/stakater/konfigurator/pkg/kube/reflect"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -167,7 +169,7 @@ func (mm *MountManager) createVolume() (*corev1.Volume, error) {
 		return objectVolume.CreateFromConfigMap(mm.resourceToMount, mm.resourceToMount), nil
 	}
 
-	return nil, fmt.Errorf("Invalid resource kind: %v", mm.resourceKind)
+	return nil, fmt.Errorf("invalid resource kind: %v", mm.resourceKind)
 }
 
 func (mm *MountManager) findContainerWithName(name string) (*corev1.Container, error) {
@@ -176,5 +178,5 @@ func (mm *MountManager) findContainerWithName(name string) (*corev1.Container, e
 			return &container, nil
 		}
 	}
-	return nil, fmt.Errorf("Cannot find container with name: %s", name)
+	return nil, fmt.Errorf("cannot find container with name: %s", name)
 }

@@ -75,7 +75,7 @@ func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[st
 	if err != nil {
 		return fmt.Errorf("webhook request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	limit := v.MaxResponseBytes
 	if limit <= 0 {

@@ -59,13 +59,13 @@ itself, so that a template created before its Deployment doesn't stay stuck sile
 **Done:** transient errors requeue with backoff; `.status.conditions` carries `Ready`/`Error`
 plus `observedGeneration`; tests cover the "app not found yet" case.
 
-### H.7 — Toolchain, dependencies, `make verify` in CI (M1–M4) — 🔨 In progress (👍 2026-11-17) · [plan](planning/H.7-toolchain-deps-verify.md)
+### H.7 — Toolchain, dependencies, `make verify` in CI (M1–M4) — ✅ Done 2026-11-17 · [plan](planning/H.7-toolchain-deps-verify.md)
 As a **maintainer**, I want the operator built on a supported Go and Kubernetes stack, with
 lint and vuln scans in CI, so that we stop shipping known CVEs and broken tooling.
 **Done:** a supported Go version in `go.mod`, the Dockerfile, and CI; k8s, controller-runtime,
 and controller-tools upgraded as a set; `make verify` (fmt · vet · build · lint · test) plus
 `govulncheck` in CI; a kind e2e smoke test.
 
-### H.8 — Remaining correctness + hygiene (B7, B8, B9, B10, B11, S3, S6–S9, M5–M9) — 📝 Draft
+### H.8 — Remaining correctness + hygiene (B7, B8, B9, B10, B11, S3, S6–S9, M8–M10) — 📝 Draft
 To be split into individual stories once H.1–H.7 are agreed. **B9 needs a product decision
 first:** either honor `PodMetadataInjector.spec` or remove those fields.

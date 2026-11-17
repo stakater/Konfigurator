@@ -102,7 +102,7 @@ type KonfiguratorTemplateList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&KonfiguratorTemplate{}, &KonfiguratorTemplateList{})
+	register(&KonfiguratorTemplate{}, &KonfiguratorTemplateList{})
 }
 
 // IsValid rejects specs the controller cannot act on. The CRD enums enforce the

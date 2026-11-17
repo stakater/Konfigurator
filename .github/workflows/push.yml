@@ -7,7 +7,7 @@ on:
 
 env:
   DOCKER_FILE_PATH: Dockerfile
-  GOLANG_VERSION: 1.17.7
+  GOLANG_VERSION: 1.27.4
   OPERATOR_SDK_VERSION: "1.2.0"
   KUSTOMIZE_VERSION: "3.5.4"
   CONTAINER_REGISTRY_URL: ghcr.io/stakater
@@ -30,10 +30,8 @@ jobs:
       with:
         go-version: ${{ env.GOLANG_VERSION }}
 
-    - name: Lint
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.44.2
-        golangci-lint run --timeout=10m ./...
+    - name: Verify
+      run: make verify codegen-check vulncheck
 
     - name: Generate Tag
       id: generate_tag

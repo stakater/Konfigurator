@@ -7,10 +7,28 @@ on:
 
 env:
   DOCKER_FILE_PATH: Dockerfile
-  GOLANG_VERSION: 1.17.7
+  GOLANG_VERSION: 1.27.4
   CONTAINER_REGISTRY_URL: ghcr.io/stakater
 
 jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    name: e2e (kind)
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{github.event.pull_request.head.sha}}
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GOLANG_VERSION }}
+
+    - name: Smoke test the image + chart on kind
+      run: make e2e
+
   build:
     runs-on: ubuntu-latest
     name: Build
@@ -27,11 +45,10 @@ jobs:
       with:
         go-version: ${{ env.GOLANG_VERSION }}
 
-    - name: Lint and test
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.44.2
-        golangci-lint run --timeout=10m ./...
-        make test
+    # Definition of Done (docs/method.md): fmt, vet, build, lint, race tests; no codegen
+    # drift; no reachable known vulnerabilities. Tool versions are pinned in the Makefile.
+    - name: Verify
+      run: make verify codegen-check vulncheck
 
     - name: Generate Tag
       id: generate_tag

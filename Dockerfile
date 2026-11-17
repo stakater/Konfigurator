@@ -1,5 +1,7 @@
-# Build the manager binary
-FROM golang:1.17 as builder
+# Build the manager binary. Go version moves together with go.mod and CI (H.7).
+FROM --platform=$BUILDPLATFORM golang:1.27.4 AS builder
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -14,8 +16,8 @@ COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
-# Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
+# Build for the target platform (multi-arch via buildx; native arch otherwise).
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

@@ -128,3 +128,22 @@ The roadmap Done line is met:
 - `make e2e` passes locally on kind.
 - CI workflows are updated.
 - M1–M4, M6, M7 are closed in the review ledger.
+
+## Outcome (2026-11-17)
+
+- **operator-utils kept.** v0.1.14 compiles and passes against controller-runtime v0.25.
+  Only `main.go` broke in the upgrade.
+- **Regression caught by the existing suite:** `pkg/kube/lists` dispatched on
+  `TypeMeta.Kind`, which the new client clears, so every mount panicked. Fixed with a type
+  switch and a regression test, then swept. Recorded as review B12.
+- **M5 pulled in:** lint flagged the dead `pkg/utils/base`, `pkg/objects`, and `GetSecret*`.
+  Deleted them, which dropped the 2018 `openshift/api` dependency.
+- `scheme.Builder` (deprecated) replaced by apimachinery's `runtime.SchemeBuilder`.
+- Regenerated RBAC is permission-identical: the generator only merged duplicate rules.
+- Generated files are excluded from the formatters, so formatting and codegen can't fight.
+- Results:
+  - `make verify`: green, lint 0 issues.
+  - `codegen-check`: clean.
+  - `vulncheck`: **0** (was 15; x/net bumped to v0.63.0).
+  - `make e2e`: passed on kind v0.32.0.
+- New finding M10: some legacy tests use `&&` assertions that rarely fail. Left for H.8.

@@ -3,10 +3,11 @@ package kube
 import (
 	"fmt"
 
-	"github.com/stakater/konfigurator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/stakater/konfigurator/api/v1alpha1"
 )
 
 // CreateObjectFromApp returns a new, empty typed workload object for app.Kind,

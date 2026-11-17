@@ -3,9 +3,10 @@ package kube
 import (
 	"testing"
 
+	appsv1 "k8s.io/api/apps/v1"
+
 	"github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/pkg/kube/testutil"
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 func TestCreateObjectFromApp(t *testing.T) {

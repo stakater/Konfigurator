@@ -25,9 +25,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	xContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	v1 "k8s.io/api/networking/v1"
+
+	xContext "github.com/stakater/konfigurator/pkg/context"
 )
 
 // IngressReconciler reconciles a KonfiguratorTemplate object
@@ -102,5 +103,5 @@ func (r *IngressReconciler) AddToContext(instance *v1.Ingress) error {
 func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Ingress{}).
-		Complete(recoverPanics(r, r.Log))
+		Complete(r)
 }

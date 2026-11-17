@@ -15,8 +15,9 @@ StatefulSet. The canonical use case is generating fluentd config per pod (`examp
   - **`KonfiguratorTemplate`**: the main feature.
   - **`PodMetadataInjector`**: injects annotations into pods *in the render context only*. It
     never patches real pods.
-- Status: legacy upstream project (last functional work in 2021, deps from 2021). **It is
-  being hardened before new feature work.** See `docs/reviews/2026-11-17-baseline-review.md`
+- Stack: **Go 1.27.4 · controller-runtime v0.25 · k8s libs v0.37** (upgraded in H.7). Legacy
+  upstream project (last functional work in 2021). **It is being hardened before new feature
+  work.** See `docs/reviews/2026-11-17-baseline-review.md`
   and roadmap Epic H.
 
 ## Mental model (how it actually works today)
@@ -59,6 +60,8 @@ a roadmap story.
 - Templates in cluster-wide mode can read **every namespace's** pod specs (S1). The webhook is
   an unbounded `http.Post` to a user-supplied URL (S2). Treat any change near rendering or the
   webhook as security-sensitive.
+- **Never dispatch on `TypeMeta`/GVK of typed objects.** controller-runtime clears TypeMeta
+  after a typed `Get`. Use a Go type switch instead (H.7 regression, `pkg/kube/lists`).
 - `PodMetadataInjector` reads the CR's **metadata** labels/annotations. `spec.selector` and
   `spec.objectMeta` are dead (B9, awaiting a decision).
 
@@ -95,19 +98,24 @@ supersede, never edit).
 
 ## Definition of Done: `make verify`
 
-`make verify` runs **fmt-check · vet · build · `go test -race`**. Lint runs if
-`golangci-lint` is installed, and otherwise it's **skipped loudly** until H.7 adds the config
-and CI wiring. A Claude Code **PostToolUse hook** (`.claude/settings.json` →
+`make verify` runs **fmt-check · vet · build · lint (golangci-lint v2, `.golangci.yml`) ·
+`go test -race`**. CI also runs `make codegen-check vulncheck` and an e2e job (`make e2e`). A Claude Code **PostToolUse hook** (`.claude/settings.json` →
 `hack/verify-hook.sh`) runs it after every `*.go`/`go.mod`/`go.sum` edit. Don't report work
 done without seeing it green.
 
-Other targets:
-- `make manifests generate`: regenerate CRDs, RBAC, and deepcopy after changing
-  `api/v1alpha1` or `+kubebuilder` markers. Then sync `charts/konfigurator/templates/crd.yaml`.
+Other targets (`make help` lists all of them). Tools are **pinned in the Makefile** and
+installed with `go install` into the gitignored `./bin`:
+- `make generate manifests`: regenerate deepcopy, CRDs, and RBAC from markers. `manifests`
+  also syncs the chart's CRD copy (`chart-crds`). **Never hand-edit generated files.**
+  `make codegen-check` fails on drift.
+- `make vulncheck`: govulncheck. It must report 0, or the PR says why.
+- `make e2e`: kind cluster, real image, real chart, render/mount/reject/cleanup smoke test.
+  Use `KEEP_CLUSTER=1` to debug. Needs docker, kubectl, and helm.
 - `make helm-lint`.
-- ⚠️ Currently broken (H.7): `make test` (dead envtest bootstrap), and tool installs that use
-  `go get` (`controller-gen`, `kustomize`).
-- `govulncheck`: not installed. Run `go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...`.
+- Upgrading Go: `go.mod`, the Dockerfile builder image, and `GOLANG_VERSION` in all three
+  workflows move together. Always use a supported Go (one of the two newest minors).
+  k8s libs, controller-runtime, and controller-tools move as a set, and need a green
+  `make e2e`.
 
 ## Testing conventions
 
@@ -126,7 +134,6 @@ Other targets:
   user-supplied field. Regenerate, then copy the CRD into the chart.
 - Chart and code move together. A new permission means a `+kubebuilder:rbac` marker **and** a
   chart RBAC change.
-- Committed binaries in `bin/` are a known wart (M6). Don't add more.
 - Feature branch per story, never `master`. Commit messages say what + why and cite the story
   code / finding id.
 

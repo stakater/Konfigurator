@@ -19,7 +19,7 @@ of these is approved yet.**
 | `go vet ./...` | ✅ green |
 | `go test -race ./...` | ✅ green. **This doesn't prove the code is race-free:** no test runs reconcilers concurrently (see B2). |
 | `golangci-lint` | ⚪ not assessed: not installed, and the repo has no config |
-| `govulncheck` (v1.1.4) | ❌ **15 reachable vulnerabilities.** 9 are in `golang.org/x/net@v0.17.0` / `x/text@v0.14.0`; the rest are in the stdlib of the *local* toolchain. The shipped image builds on **`golang:1.17`** (EOL Aug 2022), so production carries far more stdlib CVEs than this scan shows. |
+| `govulncheck` | ✅ **0** after H.7 (Go 1.27.4, x/net v0.63.0, govulncheck v1.10.0). Baseline was ❌ **15 reachable vulnerabilities.** 9 are in `golang.org/x/net@v0.17.0` / `x/text@v0.14.0`; the rest are in the stdlib of the *local* toolchain. The shipped image builds on **`golang:1.17`** (EOL Aug 2022), so production carries far more stdlib CVEs than this scan shows. |
 | `make test` | ⚪ not run. It downloads `setup-envtest.sh` from controller-runtime v0.7, a mechanism that has since been removed. |
 | Repo hygiene | `bin/manager` (44 MB) and `bin/controller-gen` (21 MB) are **committed** |
 
@@ -120,6 +120,12 @@ This is only safe because `MaxConcurrentReconciles` is 1. Raising it corrupts st
 - Template rendering only runs on a timer (default 2 min) and never on Pod/Service/Ingress
   events. The README says "when resources change", which isn't what happens.
 
+### ✅ B12. *(found and fixed in H.7)* Volume/container accessors dispatched on `TypeMeta.Kind`
+`pkg/kube/lists/{volumes,containers}`. Modern controller-runtime clears TypeMeta after a typed
+`Get`. The kind lookup then returned a nil func, and every mount panicked. It was caught by the
+existing rendering test during the upgrade, and fixed with a Go type switch plus a regression
+test. A sweep found no other TypeMeta-dependent code.
+
 ## Security
 
 ### 🔴 S1. Cross-namespace information disclosure through templates. *Confirmed by design*
@@ -202,14 +208,15 @@ out of memory. ConfigMaps are capped at 1 MiB anyway, so output can be capped th
 
 | # | Item |
 |---|---|
-| M1 | **Toolchain:** `go 1.17`, `golang:1.17` builder. Move to a supported Go (one of the two newest minors), and keep `go.mod`, the Dockerfile, and CI in lockstep. |
-| M2 | **Kubernetes stack:** k8s libs **v0.22** + controller-runtime **v0.9** (2021). Upgrade them as a set (k8s + controller-runtime + controller-tools), with e2e on kind. This brings `RecoverPanic`, a modern envtest, and current `x/net`. |
-| M3 | **Build tooling:** the Makefile installs tools with `go get` (broken since Go 1.18). `crd:trivialVersions=true` was removed from controller-gen. The envtest bootstrap is dead. Needed: `go install` with pinned versions, `setup-envtest`, and a `make verify` target (fmt-check · vet · build · lint · test). |
-| M4 | **Lint:** add `.golangci.yml` and wire it into `make verify` and CI. |
-| M5 | **Dead code:** `pkg/objects` (it's the only reason `github.com/openshift/api v3.9.0+incompatible` is a dependency), `pkg/utils/base` (`Compress`, `Output`, `MergeMapString`), `k8s_utils.GetSecret*`. All unused. |
-| M6 | **Committed binaries** in `bin/`: remove them and gitignore the folder. |
-| M7 | **Dockerfile** hardcodes `GOARCH=amd64` while CI sets up QEMU/buildx. Use `TARGETARCH` for real multi-arch. Drop `-a`. |
+| ✅ M1 | *(closed by H.7)* **Toolchain:** `go 1.17`, `golang:1.17` builder. Move to a supported Go (one of the two newest minors), and keep `go.mod`, the Dockerfile, and CI in lockstep. |
+| ✅ M2 | *(closed by H.7: k8s v0.37.2, controller-runtime v0.25.3, controller-tools v0.23.0)* **Kubernetes stack:** k8s libs **v0.22** + controller-runtime **v0.9** (2021). Upgrade them as a set (k8s + controller-runtime + controller-tools), with e2e on kind. This brings `RecoverPanic`, a modern envtest, and current `x/net`. |
+| ✅ M3 | *(closed by H.7)* **Build tooling:** the Makefile installs tools with `go get` (broken since Go 1.18). `crd:trivialVersions=true` was removed from controller-gen. The envtest bootstrap is dead. Needed: `go install` with pinned versions, `setup-envtest`, and a `make verify` target (fmt-check · vet · build · lint · test). |
+| ✅ M4 | *(closed by H.7: golangci-lint v2.15.0, 0 issues)* **Lint:** add `.golangci.yml` and wire it into `make verify` and CI. |
+| ✅ M5 | *(closed by H.7: lint forced it; `openshift/api` dependency dropped)* **Dead code:** `pkg/objects` (it's the only reason `github.com/openshift/api v3.9.0+incompatible` is a dependency), `pkg/utils/base` (`Compress`, `Output`, `MergeMapString`), `k8s_utils.GetSecret*`. All unused. |
+| ✅ M6 | *(closed by H.7)* **Committed binaries** in `bin/`: remove them and gitignore the folder. |
+| ✅ M7 | *(closed by H.7: `TARGETOS/TARGETARCH`)* **Dockerfile** hardcodes `GOARCH=amd64` while CI sets up QEMU/buildx. Use `TARGETARCH` for real multi-arch. Drop `-a`. |
 | M8 | **Tests:** controller tests only cover the happy path through the fake client. Missing: NotFound/delete paths (they'd have caught B1, B6, B8), unknown kind (B3), Secret key removal (B7), concurrency (B2), webhook timeout/deny (S2). No envtest or e2e. |
+| M10 | *(found in H.7)* Several legacy tests join their assertions with `&&`, so they fail only when *every* check fails (`pkg/kube/configmap_test.go`, `secret_test.go`, `objects/volume/volume_test.go`; the factory test was rewritten in H.1). |
 | M9 | **Docs vs. reality:** the README says "when kubernetes resources change", but rendering is timer-driven (B11). The CRD's `PodMetadataInjector.spec` is dead (B9). |
 
 ## Suggested order
