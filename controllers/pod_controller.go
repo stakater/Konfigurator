@@ -102,5 +102,5 @@ func (r *PodReconciler) AddToContext(instance *corev1.Pod) error {
 func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Pod{}).
-		Complete(r)
+		Complete(recoverPanics(r, r.Log))
 }

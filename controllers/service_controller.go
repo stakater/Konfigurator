@@ -101,5 +101,5 @@ func (r *ServiceReconciler) AddToContext(instance *corev1.Service) error {
 func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Service{}).
-		Complete(r)
+		Complete(recoverPanics(r, r.Log))
 }

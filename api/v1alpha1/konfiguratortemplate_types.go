@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,6 +31,7 @@ const (
 	PhaseRendered          Phase = "Rendered"
 )
 
+// +kubebuilder:validation:Enum=ConfigMap;Secret
 type RenderTarget string
 
 const (
@@ -36,6 +39,7 @@ const (
 	RenderTargetSecret    RenderTarget = "Secret"
 )
 
+// +kubebuilder:validation:Enum=Deployment;DaemonSet;StatefulSet
 type AppKind string
 
 const (
@@ -101,7 +105,21 @@ func init() {
 	SchemeBuilder.Register(&KonfiguratorTemplate{}, &KonfiguratorTemplateList{})
 }
 
+// IsValid rejects specs the controller cannot act on. The CRD enums enforce the
+// same rules at admission; this covers objects created before those enums existed.
 func (k *KonfiguratorTemplate) IsValid() (bool, error) {
+	switch k.Spec.App.Kind {
+	case AppKindDeployment, AppKindDaemonSet, AppKindStatefulSet:
+	default:
+		return false, fmt.Errorf("spec.app.kind %q is not supported: must be one of %s, %s, %s",
+			k.Spec.App.Kind, AppKindDeployment, AppKindDaemonSet, AppKindStatefulSet)
+	}
+	switch k.Spec.RenderTarget {
+	case RenderTargetConfigMap, RenderTargetSecret:
+	default:
+		return false, fmt.Errorf("spec.renderTarget %q is not supported: must be one of %s, %s",
+			k.Spec.RenderTarget, RenderTargetConfigMap, RenderTargetSecret)
+	}
 	return true, nil
 }
 

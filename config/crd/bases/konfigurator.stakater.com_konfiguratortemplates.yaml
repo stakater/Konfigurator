@@ -35,6 +35,10 @@ spec:
               app:
                 properties:
                   kind:
+                    enum:
+                    - Deployment
+                    - DaemonSet
+                    - StatefulSet
                     type: string
                   name:
                     type: string
@@ -56,6 +60,9 @@ spec:
                 - volumeMounts
                 type: object
               renderTarget:
+                enum:
+                - ConfigMap
+                - Secret
                 type: string
               templates:
                 additionalProperties:

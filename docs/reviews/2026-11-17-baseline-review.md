@@ -45,7 +45,7 @@ textbook data race: corrupted slices, lost updates, possible panics.
 the manager's informer cache, which is already thread-safe and already kept current by
 the same watches. This also fixes B1, B5, and B6 at the root.
 
-### 🔴 B3. An unknown `app.kind` crashes the operator in a loop. *Confirmed*
+### 🔴 B3. An unknown `app.kind` crashes the operator in a loop. *Confirmed* — ✅ **closed by H.1**
 `pkg/kube/factory.go:31` + CRD has no `enum` on `spec.app.kind`.
 `appKindToObjectMap[kind]` returns a `nil` interface for any kind except
 Deployment/DaemonSet/StatefulSet. The next line, `appObject.SetName(...)`, panics.
@@ -103,12 +103,12 @@ this is a contract mismatch, not a typo. Consequences:
 **Decision needed:** honor the spec (a breaking change for current users) or remove the spec
 fields. Whichever we choose, the List must be namespace-scoped.
 
-### 🟡 B10. Per-request state is stored on the shared reconciler. *Confirmed, latent*
+### 🟡 B10. Per-request state is stored on the shared reconciler. *Confirmed, latent* — ◐ factory singleton fixed in H.1; reconciler fields remain
 `RenderedTemplates` and `KContext` are struct fields (`konfiguratortemplate_controller.go:64-66,86`).
 `appKindToObjectMap` hands out **one global object per kind** (`factory.go:9`).
 This is only safe because `MaxConcurrentReconciles` is 1. Raising it corrupts state.
 
-### 🟡 B11. Other correctness nits
+### 🟡 B11. Other correctness nits — ◐ invalid `renderTarget` fixed in H.1; the rest remain
 - An invalid `renderTarget` (e.g. lowercase `configmap`) renders as a **Secret**
   (`CreateResources`, else-branch). Then `createVolume` and `DeleteResources` both reject
   it, so the finalizer is never removed (stuck `Terminating`). The CRD has no enum here

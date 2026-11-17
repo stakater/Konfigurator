@@ -102,5 +102,5 @@ func (r *IngressReconciler) AddToContext(instance *v1.Ingress) error {
 func (r *IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Ingress{}).
-		Complete(r)
+		Complete(recoverPanics(r, r.Log))
 }

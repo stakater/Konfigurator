@@ -161,5 +161,5 @@ func (r *PodMetadataInjectorReconciler) RemoveOnePodFromContext(instance *corev1
 func (r *PodMetadataInjectorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&konfiguratorv1alpha1.PodMetadataInjector{}).
-		Complete(r)
+		Complete(recoverPanics(r, r.Log))
 }

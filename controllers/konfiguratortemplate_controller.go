@@ -100,12 +100,8 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		return reconcilerUtil.RequeueWithError(err)
 	}
 
-	// Validate Custom Resource
-	if ok, err := instance.IsValid(); !ok {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
-	}
-
-	// Resource is marked for deletion
+	// Resource is marked for deletion. Handled before validation so that an
+	// invalid spec can still be deleted (H.1).
 	if instance.DeletionTimestamp != nil {
 		log.Info("Deletion timestamp found for instance " + req.Name)
 		if finalizerUtil.HasFinalizer(instance, TemplateFinalizer) {
@@ -115,6 +111,12 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		// Finalizer doesn't exist so clean up is already done
 		return ctrl.Result{}, nil
 	}
+
+	// An invalid spec is permanent until the user edits it: report, don't retry.
+	if ok, err := instance.IsValid(); !ok {
+		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+	}
+
 	// Add finalizer if it doesn't exist
 	if !finalizerUtil.HasFinalizer(instance, TemplateFinalizer) {
 		log.Info("Adding finalizer for instance " + req.Name)
@@ -159,17 +161,21 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating delete for KonfiguratorTemplate: %v", instance.Name))
 
-	// Delegate delete calls to controller
-	log.Info("Unmounting volumes...")
-	if err := r.UnmountVolumes(instance); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
-	}
+	// Nothing is ever rendered or mounted for an invalid spec, so there is
+	// nothing to clean up: just release the finalizer (H.1).
+	if ok, err := instance.IsValid(); !ok {
+		log.Info("Skipping cleanup for invalid spec: " + err.Error())
+	} else {
+		log.Info("Unmounting volumes...")
+		if err := r.UnmountVolumes(instance); err != nil {
+			return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		}
 
-	log.Info("Deleting resources...")
-
-	err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace)
-	if err != nil && !errors.IsNotFound(err) {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		log.Info("Deleting resources...")
+		err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace)
+		if err != nil && !errors.IsNotFound(err) {
+			return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		}
 	}
 
 	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
@@ -247,11 +253,13 @@ func (r *KonfiguratorTemplateReconciler) CreateResources(name, namespace string,
 	resourceName := r.getGeneratedResourceName(name)
 	//log.Info("getGeneratedResourceName ...")
 	// Check for render target and create resource
-	if renderTarget == v1alpha1.RenderTargetConfigMap {
+	switch renderTarget {
+	case v1alpha1.RenderTargetConfigMap:
 		return r.createConfigMap(resourceName, namespace)
-	} else {
+	case v1alpha1.RenderTargetSecret:
 		return r.createSecret(resourceName, namespace)
 	}
+	return fmt.Errorf("invalid render target %q", renderTarget)
 }
 
 func (r *KonfiguratorTemplateReconciler) MountVolumes(instance *v1alpha1.KonfiguratorTemplate) error {
@@ -320,13 +328,16 @@ func (r *KonfiguratorTemplateReconciler) createMountManager(app v1alpha1.App, na
 }
 
 func (r *KonfiguratorTemplateReconciler) fetchAppObject(app v1alpha1.App, namespace string) (metav1.Object, error) {
-	appObj := kube.CreateObjectFromApp(app, namespace)
+	appObj, err := kube.CreateObjectFromApp(app, namespace)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if the app exists
 	if err := r.Get(
 		r.KContext,
 		types.NamespacedName{Name: app.Name, Namespace: namespace},
-		appObj.(client.Object),
+		appObj,
 	); err != nil {
 		return nil, err
 	}
@@ -401,5 +412,5 @@ func (r *KonfiguratorTemplateReconciler) prepareResource(namespace string, resou
 func (r *KonfiguratorTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.KonfiguratorTemplate{}).
-		Complete(r)
+		Complete(recoverPanics(r, r.Log))
 }
