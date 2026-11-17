@@ -158,3 +158,16 @@ bump-chart:
 
 helm-lint:
 	if [ -d charts ]; then helm lint charts/konfigurator; fi
+
+# Definition of Done gate (docs/method.md). Run by the Claude Code PostToolUse hook
+# (hack/verify-hook.sh) after every Go edit, and expected green before a PR.
+# Lint is skipped (loudly) until golangci-lint + config land with roadmap story H.7.
+.PHONY: verify fmt-check
+verify: fmt-check vet
+	go build ./...
+	go test -race -count=1 ./...
+	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run --timeout=10m ./...; \
+	else echo "WARNING verify: golangci-lint not installed - lint SKIPPED (story H.7)" >&2; fi
+
+fmt-check:
+	@out="$$(gofmt -l $$(git ls-files '*.go'))"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
