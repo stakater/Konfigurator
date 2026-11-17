@@ -17,14 +17,14 @@
 These are all 📝 **Draft**. They were proposed from the review and aren't agreed yet. The
 order follows the review's "suggested order".
 
-### H.1 — Unknown `app.kind` must not crash the operator (B3) — 📝 Draft
+### H.1 — Unknown `app.kind` must not crash the operator (B3) — 🔨 In progress (👍 2026-11-17) · [plan](planning/H.1-reject-malformed-templates.md)
 As a **platform operator**, I want a malformed KonfiguratorTemplate to be rejected or reported,
 so that one tenant's typo can't crash-loop Konfigurator for everyone.
 **Done:** a CRD `enum` on `spec.app.kind` and `spec.renderTarget`; the factory returns an
 error instead of `nil`; `RecoverPanic` is on; a table test covers the unknown kind and the
 invalid render target (including a delete that doesn't hang).
 
-### H.2 — Safe validation webhook (S2) — 📝 Draft
+### H.2 — Safe validation webhook (S2) — 👍 Approved 2026-11-17
 As a **platform operator**, I want webhook calls to be bounded and limited to destinations I
 approve, so that templates can't be used for SSRF, exfiltration, or stalling the operator.
 **Done:** an HTTP client with a timeout and a response-size cap; the call uses `ctx`; the
