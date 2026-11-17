@@ -69,3 +69,19 @@ and controller-tools upgraded as a set; `make verify` (fmt · vet · build · li
 ### H.8 — Remaining correctness + hygiene (B7, B8, B9, B10, B11, S3, S6–S9, M8–M10) — 📝 Draft
 To be split into individual stories once H.1–H.7 are agreed. **B9 needs a product decision
 first:** either honor `PodMetadataInjector.spec` or remove those fields.
+
+### H.9 — Adopt Stakater shared CI workflows — 📝 Draft · *needs a decision*
+As a **Stakater maintainer**, I want Konfigurator to build, test, and release through the shared
+`stakater/.github` operator workflows like kube-ward, so that CI upkeep and action pinning (S8)
+are done once for the org, not per repo.
+**Decision first:** release model.
+- (a) Move to OLM bundle + OCI Helm chart, like kube-ward. This changes how users install it.
+- (b) Keep image + gh-pages chart, using the shared PR/push verification with the bundle and
+  chart-push steps turned off.
+
+**Done:** `pull_request`/`push`/`release` (+ e2e) are thin callers of
+`stakater/.github/.github/workflows/operator_*.yaml@main`; the Makefile provides the targets those
+workflows call (`lint`, `test`, `build`, `docker-build/push`, and per the decision `bundle*`,
+`catalog-*`, `helm-test`, `helm-release`, `test-e2e`); `make e2e` keeps running; a release from
+a tag is proven end to end. Context: today's workflows are inline (2026-11-17 check), and the
+shared ones are driven by Make targets.
