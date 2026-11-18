@@ -56,9 +56,11 @@ a roadmap story.
 - **The render context is a hand-rolled, unlocked mirror of the informer cache** (B2). Deleted
   objects are never evicted (B1). The planned fix is to *delete* it and `List` from the
   manager cache (H.5). **Don't add more state to `xContext.Context`.**
-- `ManageError(..., isRetriable)`: `false` means **no requeue and no status**, `true` returns
-  the error for backoff **but still no status** (`KonfiguratorTemplate` isn't
-  `ConditionsStatusAware`, B4/H.6). Only `IsValid()` failures use `false`: they are permanent.
+- Errors are classified **at the source** with `pkg/reconcileerr.Permanent` (template parse,
+  webhook not allow-listed/denied, container missing, invalid spec) and mapped once in
+  `controllers.fail()`: permanent → `reconcile.TerminalError` (logged, counted, **not**
+  requeued); anything else → returned for backoff. Don't call operator-utils `ManageError` in
+  this controller: it swallows errors. Nothing lands in `.status` yet (B4/H.6).
 - ~~An unknown `app.kind` causes a nil-interface panic and a crash-loop (B3).~~ Fixed in H.1
   (CRD enums + `IsValid` + `RecoverPanic`). Keep it that way: every user-supplied field gets a
   validation marker.
@@ -128,7 +130,10 @@ installed with `go install` into the gitignored `./bin`:
 
 - **Table-driven** by default. Unit tests never touch a real cluster or network. Use the fake
   client (`sigs.k8s.io/controller-runtime/pkg/client/fake`) and `pkg/kube/testutil`.
-- Every bug fix starts with a test that reproduces the bug. The review lists which paths have
+- Every bug fix starts with a test that reproduces the bug.
+- **Every reconciler failure point has a row in `TestReconcileFailureClassification`** (injected
+  fault → terminal or retry). `make mutation-check` swallows each error site in turn and requires
+  a test to fail; it runs in CI. If you add an error return, add the row, then run it. The review lists which paths have
   no tests: NotFound/delete, unknown kind, Secret key removal, concurrency, webhook failure.
 - Startup wiring is code too. If you change `main.go` wiring, a test must build it through the
   same function the binary uses.

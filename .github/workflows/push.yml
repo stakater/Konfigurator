@@ -31,7 +31,7 @@ jobs:
         go-version: ${{ env.GOLANG_VERSION }}
 
     - name: Verify
-      run: make verify codegen-check vulncheck
+      run: make verify codegen-check vulncheck helm-lint mutation-check
 
     - name: Generate Tag
       id: generate_tag

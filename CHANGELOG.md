@@ -24,8 +24,10 @@ publishes a release (`push.yml`), so this section must be current before merge.
            or (.spec.renderTarget | IN("ConfigMap","Secret") | not))
      | "\(.metadata.namespace)/\(.metadata.name) kind=\(.spec.app.kind) target=\(.spec.renderTarget)"'
    ```
-   On Kubernetes < 1.30 such a CR cannot be deleted once the new CRD is applied: edit its spec
-   to a supported value first, then delete.
+   On Kubernetes < 1.30 such a CR cannot be deleted once the new CRD is applied. Edit it first:
+   `spec.app.kind` to `Deployment`/`DaemonSet`/`StatefulSet`, and `spec.renderTarget` to
+   **`Secret`** (pre-upgrade operators rendered a Secret for any value other than `ConfigMap`,
+   so that is the object the delete must clean up), then delete.
 4. **`helm upgrade --reuse-values`** from an older release works (the new value defaults safely).
 
 ### Security
@@ -39,7 +41,10 @@ publishes a release (`push.yml`), so this section must be current before merge.
   admission and can always be deleted (H.1).
 - Deleting a template whose workload is already gone, or whose spec is a legacy invalid value,
   now releases the finalizer and removes the rendered ConfigMap/Secret (PR #166 review).
-- Errors on the create and delete paths are retried with backoff instead of silently dropped
+- Errors are no longer silently dropped. Transient ones (webhook timeout/5xx, API conflict,
+  app not present yet) are retried with backoff; permanent ones (template does not parse,
+  webhook host not allow-listed or `allowed: false`, container missing, invalid spec) are
+  terminal: logged and counted, not retried, so they cannot starve the worker
   (PR #166 review; status conditions still pending, H.6).
 - Volume/container lookup no longer depends on `TypeMeta`, which newer controller-runtime
   clears after a `Get` (H.7, B12).

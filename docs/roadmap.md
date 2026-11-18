@@ -51,7 +51,9 @@ so that deleted pods disappear, restarts never write empty config, and there are
 races.
 **Done:** `pkg/context` mirror and the Pod/Service/Ingress "cache" reconcilers removed;
 rendering `List`s from the manager cache after it syncs; tests for deleted objects, a cold
-start, and `go test -race` with concurrent reconciles.
+start, and `go test -race` with concurrent reconciles. Also owns: request-scoped state off
+the reconciler struct (B10/#166 F4) and the rendered-object name clash between templates for
+the same app (S3, #166 X13: ownerRef + refuse to adopt).
 
 ### H.6 — Retry + status conditions on KonfiguratorTemplate (B4) — 📝 Draft
 As a **template author**, I want to see why my template isn't applied and have it recover by
@@ -69,8 +71,9 @@ and controller-tools upgraded as a set; `make verify` (fmt · vet · build · li
 ### H.8 — Remaining correctness + hygiene (B7, B8, B9, B10, B11, S3, S6–S9, M8–M10) — 📝 Draft
 To be split into individual stories once H.1–H.7 are agreed. **B9 needs a product decision
 first:** either honor `PodMetadataInjector.spec` or remove those fields. Also from the #166
-external review: a webhook dialer guard refusing loopback/link-local addresses (X5), and
-pinning actions to SHAs (X8/S8).
+external review: a webhook dialer guard refusing loopback/link-local addresses (X5), pinning
+actions to SHAs (X8/S8), and a startup check that warns when the API server is below the
+1.30 floor, for kustomize/OLM installs the chart `kubeVersion` cannot guard (X10).
 
 ### H.9 — Adopt Stakater shared CI workflows — 📝 Draft · *needs a decision*
 As a **Stakater maintainer**, I want Konfigurator to build, test, and release through the shared

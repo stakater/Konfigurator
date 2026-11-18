@@ -243,3 +243,15 @@ Independent review of the hardening PR; two findings reproduced on real clusters
 | X6 | CI built amd64 only | ✅ fixed: `platforms: linux/amd64,linux/arm64` |
 | X7 | Committed `.claude/settings.json` hook affects every agent user | kept by design (method enforcement); opt-out documented in `CLAUDE.md` |
 | X8 | `@master` actions with `PUBLISH_TOKEN` | pre-existing → S8 / H.8 |
+
+### Round 3 (re-review of 0b99afe / 6a0c9b9)
+
+| # | Finding | Outcome |
+|---|---|---|
+| X9 | `make helm-lint` fails on Helm ≤ 3.14 (default kube version 1.29 < new floor); not run in CI | ✅ `--kube-version 1.30.0` on lint and both renders; `helm-lint` + `mutation-check` run in CI |
+| X10 | `kubeVersion` guards Helm installs only; kustomize/OLM users get no check | → **H.8**: startup check logging a warning when the server version is < 1.30 |
+| X11 | Finalizer-add `Update` still `isRetriable=false` | ✅ all sites go through `fail()`; covered by the classification table |
+| X12 | Retrying permanent webhook errors can starve the single worker | ✅ `pkg/reconcileerr` marks permanent errors at the source; `fail()` maps them to `reconcile.TerminalError`. Classification pinned for 15 failure points |
+| X13 | Legacy Secret deleted by name only | ✅ deleted only when it carries the `generated-by` annotation. The name clash with a valid template for the same app is S3 → **H.5** (ownerRef) |
+| X14 | Tests covered 2 of 7 retry sites | ✅ `TestReconcileFailureClassification` (15 rows) + `make mutation-check` (swallows each site, breaks `fail()` both ways; all mutants must die) |
+| X15 | 422 hint: `IsInvalid` is broader than "< 1.30"; "supported value" ambiguous for `renderTarget` | ✅ "If this is Kubernetes < 1.30 …", names the values, says `Secret`; CHANGELOG matches |

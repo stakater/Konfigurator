@@ -108,9 +108,13 @@ docker-push: ## Push the docker image.
 
 .PHONY: helm-lint
 helm-lint: ## Lint the chart and render it as an upgrade with --reuse-values from a pre-H.2 release would.
-	helm lint charts/konfigurator
-	helm template charts/konfigurator --set validationWebhook=null >/dev/null
-	helm template charts/konfigurator --set 'validationWebhook.allowedHosts={a.svc,b.svc:8443}' | grep -q 'a.svc,b.svc:8443' 
+	helm lint --kube-version 1.30.0 charts/konfigurator
+	helm template charts/konfigurator --kube-version 1.30.0 --set validationWebhook=null >/dev/null
+	helm template charts/konfigurator --kube-version 1.30.0 --set 'validationWebhook.allowedHosts={a.svc,b.svc:8443}' | grep -q 'a.svc,b.svc:8443'
+
+.PHONY: mutation-check
+mutation-check: ## Prove every reconciler error site is covered: swallow each one and require a failing test.
+	hack/mutation-check.sh
 
 .PHONY: bump-chart
 bump-chart: ## Set chart version/appVersion/image tag to $(VERSION) (used by CI).

@@ -48,7 +48,7 @@ jobs:
     # Definition of Done (docs/method.md): fmt, vet, build, lint, race tests; no codegen
     # drift; no reachable known vulnerabilities. Tool versions are pinned in the Makefile.
     - name: Verify
-      run: make verify codegen-check vulncheck
+      run: make verify codegen-check vulncheck helm-lint mutation-check
 
     - name: Generate Tag
       id: generate_tag
