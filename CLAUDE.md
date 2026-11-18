@@ -56,11 +56,15 @@ a roadmap story.
 - **The render context is a hand-rolled, unlocked mirror of the informer cache** (B2). Deleted
   objects are never evicted (B1). The planned fix is to *delete* it and `List` from the
   manager cache (H.5). **Don't add more state to `xContext.Context`.**
-- Errors are classified **at the source** with `pkg/reconcileerr.Permanent` (template parse,
-  webhook not allow-listed/denied, container missing, invalid spec) and mapped once in
-  `controllers.fail()`: permanent → `reconcile.TerminalError` (logged, counted, **not**
-  requeued); anything else → returned for backoff. Don't call operator-utils `ManageError` in
-  this controller: it swallows errors. Nothing lands in `.status` yet (B4/H.6).
+- Errors are classified **at the source** (`pkg/reconcileerr`) and mapped once in
+  `(*KonfiguratorTemplateReconciler).fail()`: **Permanent** (only a CR edit fixes it: parse
+  error, webhook host not allow-listed, invalid spec) → `reconcile.TerminalError`, not
+  requeued; **NextCycle** (depends on cluster state nothing watches: execute error, webhook
+  `allowed:false`, container not there yet) → nil error + `RequeueAfter(updateFrequency)`;
+  unmarked → returned for backoff. **Never mark a state-dependent error Permanent:** templates
+  are only re-triggered by their own timer, so a terminal error on state freezes the template
+  until a human edits the CR (#166 round 4). Don't call operator-utils `ManageError` here: it
+  swallows errors. Nothing lands in `.status` yet (B4/H.6).
 - ~~An unknown `app.kind` causes a nil-interface panic and a crash-loop (B3).~~ Fixed in H.1
   (CRD enums + `IsValid` + `RecoverPanic`). Keep it that way: every user-supplied field gets a
   validation marker.
@@ -132,8 +136,10 @@ installed with `go install` into the gitignored `./bin`:
   client (`sigs.k8s.io/controller-runtime/pkg/client/fake`) and `pkg/kube/testutil`.
 - Every bug fix starts with a test that reproduces the bug.
 - **Every reconciler failure point has a row in `TestReconcileFailureClassification`** (injected
-  fault → terminal or retry). `make mutation-check` swallows each error site in turn and requires
-  a test to fail; it runs in CI. If you add an error return, add the row, then run it. The review lists which paths have
+  fault → terminal, nextCycle or retry). `make mutation-check` (CI) runs the suite once clean,
+  then mutates **every error return** in the controller (via `go test -overlay`, the source is
+  never edited) and breaks `fail()` four ways; every mutant must be killed and at least 20 must
+  exist. If you add an error return, add the row, then run it. The review lists which paths have
   no tests: NotFound/delete, unknown kind, Secret key removal, concurrency, webhook failure.
 - Startup wiring is code too. If you change `main.go` wiring, a test must build it through the
   same function the binary uses.

@@ -41,11 +41,14 @@ publishes a release (`push.yml`), so this section must be current before merge.
   admission and can always be deleted (H.1).
 - Deleting a template whose workload is already gone, or whose spec is a legacy invalid value,
   now releases the finalizer and removes the rendered ConfigMap/Secret (PR #166 review).
-- Errors are no longer silently dropped. Transient ones (webhook timeout/5xx, API conflict,
-  app not present yet) are retried with backoff; permanent ones (template does not parse,
-  webhook host not allow-listed or `allowed: false`, container missing, invalid spec) are
-  terminal: logged and counted, not retried, so they cannot starve the worker
-  (PR #166 review; status conditions still pending, H.6).
+- Errors are no longer silently dropped, and are handled by kind (PR #166 review):
+  transient ones (webhook timeout/5xx, API conflict, app not present yet) are retried with
+  backoff; ones that depend on cluster state (template execute error such as `index .Pods 0`
+  on an empty list, webhook `allowed: false`, container not present yet) keep the normal
+  `updateFrequency` render cycle so the template recovers by itself; permanent ones (template
+  does not parse, webhook host not allow-listed, invalid spec) are terminal: logged and
+  counted, not retried. Status conditions are still pending (H.6).
+- A negative `updateFrequency` no longer causes a hot requeue loop; it means the default.
 - Volume/container lookup no longer depends on `TypeMeta`, which newer controller-runtime
   clears after a `Get` (H.7, B12).
 

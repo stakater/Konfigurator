@@ -255,3 +255,13 @@ Independent review of the hardening PR; two findings reproduced on real clusters
 | X13 | Legacy Secret deleted by name only | ✅ deleted only when it carries the `generated-by` annotation. The name clash with a valid template for the same app is S3 → **H.5** (ownerRef) |
 | X14 | Tests covered 2 of 7 retry sites | ✅ `TestReconcileFailureClassification` (15 rows) + `make mutation-check` (swallows each site, breaks `fail()` both ways; all mutants must die) |
 | X15 | 422 hint: `IsInvalid` is broader than "< 1.30"; "supported value" ambiguous for `renderTarget` | ✅ "If this is Kubernetes < 1.30 …", names the values, says `Secret`; CHANGELOG matches |
+
+### Round 4 (re-review of 4dbe5de, changes requested)
+
+| # | Finding | Outcome |
+|---|---|---|
+| X16 | **Blocking:** state-dependent errors were terminal, which drops `RequeueAfter` and nothing else re-triggers a template, so `index .Pods 0` on a momentarily empty list froze the template until a CR edit | ✅ third class `reconcileerr.NextCycle` → nil error + `RequeueAfter(updateFrequency)`. Execute errors, webhook `allowed:false` / oversized / non-JSON 2xx, and a missing container are next-cycle; parse error, invalid spec, bad URL/scheme, host not allowed stay terminal. Rows added, incl. one that pins `updateFrequency` |
+| X17 | `template` marked execute errors permanent | ✅ parse → permanent, execute → next cycle (`pkg/template` test) |
+| X18 | `webhook` marked `allowed:false`, oversized and non-JSON 2xx permanent; timeout still retried though round 3 said "fixed" | ✅ reclassified next-cycle. Timeout retry with backoff is intended: transient, bounded by the rate limiter; the round-3 starvation came from *permanent* errors being retried, which is what was fixed. Wording corrected |
+| X19 | `mounts` marked a missing container permanent | ✅ next cycle |
+| X20 | Mutation script: no baseline run, trivially-passing grep, in-place edits, only `fail(` sites | ✅ rewritten: baseline must pass first; ≥ 20 mutants required; `go test -overlay`, source never touched; mutates every `return err` / `return nil, err` / `return r.fail(...)` / `RequeueWithError` site and breaks `fail()` four ways |
