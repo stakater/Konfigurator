@@ -135,19 +135,22 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
+	// Errors below are returned (isRetriable=true) so controller-runtime retries
+	// with exponential backoff: a webhook timeout, an API conflict, or an app that
+	// does not exist yet must not silently stop this template (review #166, B4).
 	log.Info("Rendering templates...")
 	if err := r.RenderTemplates(ctx, req, instance); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		return reconcilerUtil.ManageError(r.Client, instance, err, true)
 	}
 
 	log.Info("Creating resources...")
 	if err := r.CreateResources(instance.Spec.App.Name, instance.Namespace, instance.Spec.RenderTarget); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		return reconcilerUtil.ManageError(r.Client, instance, err, true)
 	}
 
 	log.Info("Mounting volumes...")
 	if err := r.MountVolumes(instance); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		return reconcilerUtil.ManageError(r.Client, instance, err, true)
 	}
 	if instance.Spec.UpdateFrequency == 0 {
 		return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
@@ -166,25 +169,40 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 	//    means there is nothing left to unmount;
 	//  - delete the rendered object whenever the render target is valid, even if
 	//    app.kind is not: pre-H.1 operators rendered it before failing on the kind.
+	// Transient errors are returned (isRetriable=true) so the delete is retried
+	// instead of leaving the CR in Terminating until the next resync.
 	if !instance.Spec.App.Kind.IsSupported() {
 		log.Info("Skipping unmount: unsupported app.kind " + string(instance.Spec.App.Kind))
 	} else if err := r.UnmountVolumes(instance); err != nil {
 		if !errors.IsNotFound(err) {
-			return reconcilerUtil.ManageError(r.Client, instance, err, false)
+			return reconcilerUtil.ManageError(r.Client, instance, err, true)
 		}
 		log.Info("App not found; nothing to unmount")
 	}
 
-	if !instance.Spec.RenderTarget.IsSupported() {
-		log.Info("Skipping rendered-object deletion: unsupported renderTarget " + string(instance.Spec.RenderTarget))
-	} else if err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+	if instance.Spec.RenderTarget.IsSupported() {
+		if err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
+			return reconcilerUtil.ManageError(r.Client, instance, err, true)
+		}
+	} else {
+		// Pre-H.1 operators rendered a Secret for every target other than
+		// "ConfigMap", so that is the object a legacy invalid CR may have left.
+		log.Info("Unsupported renderTarget " + string(instance.Spec.RenderTarget) + ": removing the legacy rendered Secret if present")
+		if err := r.deleteSecret(instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
+			return reconcilerUtil.ManageError(r.Client, instance, err, true)
+		}
 	}
 
 	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
-	// Update instance
 	if err := r.Update(ctx, instance); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		if errors.IsInvalid(err) {
+			// Kubernetes < 1.30 has no CRD validation ratcheting: it re-validates
+			// the whole object on this update and rejects a legacy invalid spec,
+			// so the finalizer can never be removed by the operator.
+			err = fmt.Errorf("cannot remove finalizer: the API server rejected the object (%w); "+
+				"on Kubernetes < 1.30 edit spec.app.kind / spec.renderTarget to a supported value, then delete again", err)
+		}
+		return reconcilerUtil.ManageError(r.Client, instance, err, true)
 	}
 	log.Info(fmt.Sprintf("Deleted KonfiguratorTemplate: %v", instance.Name))
 

@@ -73,3 +73,26 @@ func TestDeleteLegacyInvalidKindTemplateRemovesRenderedObject(t *testing.T) {
 		t.Fatal("finalizer still present")
 	}
 }
+
+// PR #166 review (aayeshaarshad): master's CreateResources fell through to a
+// Secret for any renderTarget other than "ConfigMap", so a legacy CR with e.g.
+// "configmap" left a Secret behind. Deleting it must remove that Secret.
+func TestDeleteLegacyInvalidTargetRemovesSecret(t *testing.T) {
+	tpl := invalidTemplate(konfiguratorv1alpha1.AppKindDeployment, "configmap")
+	now := metav1.Now()
+	tpl.DeletionTimestamp = &now
+	leftover := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name: "konfigurator-app-rendered", Namespace: TestNamespace,
+		Annotations: map[string]string{GeneratedByAnnotation: "konfigurator"},
+	}}
+	r, c := newTemplateReconciler(tpl, leftover)
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Name: "bad", Namespace: TestNamespace}}
+
+	if _, err := r.Reconcile(context.TODO(), req); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	name := types.NamespacedName{Name: leftover.Name, Namespace: TestNamespace}
+	if err := c.Get(context.TODO(), name, &corev1.Secret{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("leftover Secret must be deleted, got err=%v", err)
+	}
+}
