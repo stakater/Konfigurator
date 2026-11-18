@@ -110,7 +110,8 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, nil
 	}
 
-	// An invalid spec is permanent until the user edits it: report, don't retry.
+	// An invalid spec is permanent until the user edits it: log it, don't retry.
+	// (It is not surfaced in .status yet: review B4, story H.6.)
 	if ok, err := instance.IsValid(); !ok {
 		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
@@ -159,21 +160,25 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating delete for KonfiguratorTemplate: %v", instance.Name))
 
-	// Nothing is ever rendered or mounted for an invalid spec, so there is
-	// nothing to clean up: just release the finalizer (H.1).
-	if ok, err := instance.IsValid(); !ok {
-		log.Info("Skipping cleanup for invalid spec: " + err.Error())
-	} else {
-		log.Info("Unmounting volumes...")
-		if err := r.UnmountVolumes(instance); err != nil {
+	// Each cleanup step is decided on its own, so a CR can always be deleted
+	// (H.1; review #166 findings 1 and 2):
+	//  - unmount only when the app kind is one we can address; a missing app
+	//    means there is nothing left to unmount;
+	//  - delete the rendered object whenever the render target is valid, even if
+	//    app.kind is not: pre-H.1 operators rendered it before failing on the kind.
+	if !instance.Spec.App.Kind.IsSupported() {
+		log.Info("Skipping unmount: unsupported app.kind " + string(instance.Spec.App.Kind))
+	} else if err := r.UnmountVolumes(instance); err != nil {
+		if !errors.IsNotFound(err) {
 			return reconcilerUtil.ManageError(r.Client, instance, err, false)
 		}
+		log.Info("App not found; nothing to unmount")
+	}
 
-		log.Info("Deleting resources...")
-		err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace)
-		if err != nil && !errors.IsNotFound(err) {
-			return reconcilerUtil.ManageError(r.Client, instance, err, false)
-		}
+	if !instance.Spec.RenderTarget.IsSupported() {
+		log.Info("Skipping rendered-object deletion: unsupported renderTarget " + string(instance.Spec.RenderTarget))
+	} else if err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
+		return reconcilerUtil.ManageError(r.Client, instance, err, false)
 	}
 
 	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
