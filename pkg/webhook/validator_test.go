@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stakater/konfigurator/pkg/reconcileerr"
 )
 
 type server struct {
@@ -50,10 +52,12 @@ func TestValidate(t *testing.T) {
 		name string
 		// setup returns the URL to call, the allow-list, and the servers whose
 		// hit counts must match wantHits.
-		setup    func(t *testing.T) (target string, allowed []string, watched []*server)
-		ctx      func() context.Context
-		wantErr  string // substring; "" means success
-		wantHits []int32
+		setup   func(t *testing.T) (target string, allowed []string, watched []*server)
+		ctx     func() context.Context
+		wantErr string // substring; "" means success
+		// permanent: the reconciler must not retry this (config/contract failure).
+		permanent bool
+		wantHits  []int32
 	}{
 		{
 			name: "allowed host, allowed:true",
@@ -75,7 +79,7 @@ func TestValidate(t *testing.T) {
 				s := newServer(t, reply(`{"allowed":false,"message":"bad regex"}`))
 				return s.URL, []string{s.host(t)}, []*server{s}
 			},
-			wantErr: "bad regex", wantHits: []int32{1},
+			permanent: true, wantErr: "bad regex", wantHits: []int32{1},
 		},
 		{
 			name: "host not on allow-list is never contacted",
@@ -83,7 +87,7 @@ func TestValidate(t *testing.T) {
 				s := newServer(t, reply(`{"allowed":true}`))
 				return s.URL, []string{"validator.example.svc"}, []*server{s}
 			},
-			wantErr: "not in the allowed", wantHits: []int32{0},
+			permanent: true, wantErr: "not in the allowed", wantHits: []int32{0},
 		},
 		{
 			name: "empty allow-list disables webhooks",
@@ -91,7 +95,7 @@ func TestValidate(t *testing.T) {
 				s := newServer(t, reply(`{"allowed":true}`))
 				return s.URL, nil, []*server{s}
 			},
-			wantErr: "disabled", wantHits: []int32{0},
+			permanent: true, wantErr: "disabled", wantHits: []int32{0},
 		},
 		{
 			name: "allow-list match is case-insensitive",
@@ -117,17 +121,17 @@ func TestValidate(t *testing.T) {
 				u, _ := url.Parse(s.URL)
 				return s.URL, []string{u.Hostname() + ":1"}, []*server{s}
 			},
-			wantErr: "not in the allowed", wantHits: []int32{0},
+			permanent: true, wantErr: "not in the allowed", wantHits: []int32{0},
 		},
 		{
-			name:    "file scheme rejected",
-			setup:   func(t *testing.T) (string, []string, []*server) { return "file:///etc/passwd", []string{""}, nil },
-			wantErr: "scheme",
+			name:      "file scheme rejected",
+			setup:     func(t *testing.T) (string, []string, []*server) { return "file:///etc/passwd", []string{""}, nil },
+			permanent: true, wantErr: "scheme",
 		},
 		{
-			name:    "unparsable URL rejected",
-			setup:   func(t *testing.T) (string, []string, []*server) { return "::not a url", []string{"x"}, nil },
-			wantErr: "invalid",
+			name:      "unparsable URL rejected",
+			setup:     func(t *testing.T) (string, []string, []*server) { return "::not a url", []string{"x"}, nil },
+			permanent: true, wantErr: "invalid",
 		},
 		{
 			name: "slow server times out",
@@ -148,7 +152,7 @@ func TestValidate(t *testing.T) {
 				s := newServer(t, reply(`{"allowed":true,"message":"`+strings.Repeat("x", 2048)+`"}`))
 				return s.URL, []string{s.host(t)}, []*server{s}
 			},
-			wantErr: "exceeds", wantHits: []int32{1},
+			permanent: true, wantErr: "exceeds", wantHits: []int32{1},
 		},
 		{
 			name: "redirect is refused and target never contacted",
@@ -159,7 +163,7 @@ func TestValidate(t *testing.T) {
 				})
 				return redirector.URL, []string{redirector.host(t), target.host(t)}, []*server{redirector, target}
 			},
-			wantErr: "redirect", wantHits: []int32{1, 0},
+			permanent: true, wantErr: "redirect", wantHits: []int32{1, 0},
 		},
 		{
 			name: "non-2xx is an error",
@@ -208,6 +212,9 @@ func TestValidate(t *testing.T) {
 				t.Fatalf("want error containing %q, got nil", tt.wantErr)
 			case tt.wantErr != "" && !strings.Contains(err.Error(), tt.wantErr):
 				t.Fatalf("error %q does not contain %q", err, tt.wantErr)
+			}
+			if err != nil && reconcileerr.IsPermanent(err) != tt.permanent {
+				t.Fatalf("permanent = %v, want %v for %v", !tt.permanent, tt.permanent, err)
 			}
 			for i, s := range watched {
 				if got := atomic.LoadInt32(&s.hits); got != tt.wantHits[i] {

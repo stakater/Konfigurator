@@ -11,6 +11,7 @@ import (
 	"github.com/stakater/konfigurator/pkg/kube/lists/volumes"
 	objectVolume "github.com/stakater/konfigurator/pkg/kube/objects/volume"
 	kubereflect "github.com/stakater/konfigurator/pkg/kube/reflect"
+	"github.com/stakater/konfigurator/pkg/reconcileerr"
 )
 
 const (
@@ -169,7 +170,7 @@ func (mm *MountManager) createVolume() (*corev1.Volume, error) {
 		return objectVolume.CreateFromConfigMap(mm.resourceToMount, mm.resourceToMount), nil
 	}
 
-	return nil, fmt.Errorf("invalid resource kind: %v", mm.resourceKind)
+	return nil, reconcileerr.Permanent(fmt.Errorf("invalid resource kind: %v", mm.resourceKind))
 }
 
 func (mm *MountManager) findContainerWithName(name string) (*corev1.Container, error) {
@@ -178,5 +179,5 @@ func (mm *MountManager) findContainerWithName(name string) (*corev1.Container, e
 			return &container, nil
 		}
 	}
-	return nil, fmt.Errorf("cannot find container with name: %s", name)
+	return nil, reconcileerr.Permanent(fmt.Errorf("cannot find container with name: %s", name))
 }

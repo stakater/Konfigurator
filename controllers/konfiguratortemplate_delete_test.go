@@ -96,3 +96,21 @@ func TestDeleteLegacyInvalidTargetRemovesSecret(t *testing.T) {
 		t.Fatalf("leftover Secret must be deleted, got err=%v", err)
 	}
 }
+
+// PR #166 review, round 3: the legacy cleanup deletes by name. It must at least
+// leave alone a Secret that does not carry the generated-by annotation.
+func TestDeleteLegacyInvalidTargetKeepsForeignSecret(t *testing.T) {
+	tpl := invalidTemplate(konfiguratorv1alpha1.AppKindDeployment, "configmap")
+	now := metav1.Now()
+	tpl.DeletionTimestamp = &now
+	foreign := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "konfigurator-app-rendered", Namespace: TestNamespace}}
+	r, c := newTemplateReconciler(tpl, foreign)
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Name: "bad", Namespace: TestNamespace}}
+
+	if _, err := r.Reconcile(context.TODO(), req); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	if err := c.Get(context.TODO(), types.NamespacedName{Name: foreign.Name, Namespace: TestNamespace}, &corev1.Secret{}); err != nil {
+		t.Fatalf("a Secret without the generated-by annotation must survive, got err=%v", err)
+	}
+}

@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/stakater/konfigurator/pkg/reconcileerr"
 )
 
 const (
@@ -47,24 +49,29 @@ type response struct {
 // Validate sends rendered to rawURL and returns nil only if the webhook answered
 // 2xx with {"allowed": true}. Nothing is sent unless the URL is http(s) and its
 // host is allow-listed.
+//
+// Errors are classified for the reconciler: configuration and contract failures
+// (bad URL, host not allowed, redirect, oversized or malformed reply, allowed:false)
+// are reconcileerr.Permanent; network failures and non-2xx replies are left plain
+// so they are retried.
 func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[string]string) error {
 	u, err := url.ParseRequestURI(rawURL)
 	if err != nil {
-		return fmt.Errorf("invalid webhook URL %q: %w", rawURL, err)
+		return reconcileerr.Permanent(fmt.Errorf("invalid webhook URL %q: %w", rawURL, err))
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("webhook URL %q: unsupported scheme %q (want http or https)", rawURL, u.Scheme)
+		return reconcileerr.Permanent(fmt.Errorf("webhook URL %q: unsupported scheme %q (want http or https)", rawURL, u.Scheme))
 	}
 	if v == nil || len(v.AllowedHosts) == 0 {
-		return fmt.Errorf("validation webhooks are disabled: no allowed hosts configured by the operator admin (%s)", AllowedHostsEnv)
+		return reconcileerr.Permanent(fmt.Errorf("validation webhooks are disabled: no allowed hosts configured by the operator admin (%s)", AllowedHostsEnv))
 	}
 	if !v.allowed(u) {
-		return fmt.Errorf("webhook host %q is not in the allowed hosts configured by the operator admin (%s)", u.Host, AllowedHostsEnv)
+		return reconcileerr.Permanent(fmt.Errorf("webhook host %q is not in the allowed hosts configured by the operator admin (%s)", u.Host, AllowedHostsEnv))
 	}
 
 	body, err := json.Marshal(rendered)
 	if err != nil {
-		return fmt.Errorf("webhook request serialization failed: %w", err)
+		return reconcileerr.Permanent(fmt.Errorf("webhook request serialization failed: %w", err))
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
 	if err != nil {
@@ -74,7 +81,11 @@ func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[st
 
 	resp, err := v.client().Do(req)
 	if err != nil {
-		return fmt.Errorf("webhook request failed: %w", err)
+		err = fmt.Errorf("webhook request failed: %w", err)
+		if errors.Is(err, errRedirect) {
+			return reconcileerr.Permanent(err) // the webhook is misconfigured, not flaky
+		}
+		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -87,7 +98,7 @@ func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[st
 		return fmt.Errorf("webhook response read failed: %w", err)
 	}
 	if int64(len(raw)) > limit {
-		return fmt.Errorf("webhook response exceeds %d bytes", limit)
+		return reconcileerr.Permanent(fmt.Errorf("webhook response exceeds %d bytes", limit))
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
@@ -95,10 +106,10 @@ func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[st
 
 	var res response
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return fmt.Errorf("webhook response decoding failed: %w", err)
+		return reconcileerr.Permanent(fmt.Errorf("webhook response decoding failed: %w", err))
 	}
 	if !res.Allowed {
-		return fmt.Errorf("template is invalid: %s", res.Message)
+		return reconcileerr.Permanent(fmt.Errorf("template is invalid: %s", res.Message))
 	}
 	return nil
 }

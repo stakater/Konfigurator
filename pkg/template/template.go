@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/stakater/konfigurator/pkg/reconcileerr"
 	"github.com/stakater/konfigurator/pkg/template/funcs"
 )
 
@@ -22,14 +23,16 @@ func ExecuteFile(path string, data interface{}) ([]byte, error) {
 	return executeTemplate(template, data)
 }
 
-// ExecuteString executes a template string with the specified data
+// ExecuteString executes a template string with the specified data. Errors are
+// marked permanent: only the template author can fix them, retrying cannot.
 func ExecuteString(text string, data interface{}) ([]byte, error) {
 	template, err := newTemplate("stdin").Parse(text)
 	if err != nil {
-		return nil, err
+		return nil, reconcileerr.Permanent(err)
 	}
 
-	return executeTemplate(template, data)
+	out, err := executeTemplate(template, data)
+	return out, reconcileerr.Permanent(err)
 }
 
 // Helper for ExecuteFile and ExecuteString - actually executes the template

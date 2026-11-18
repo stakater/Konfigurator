@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
@@ -56,8 +57,9 @@ func TestReconcileInvalidTemplateDoesNotPanicOrRender(t *testing.T) {
 			r, c := newTemplateReconciler(invalidTemplate(tt.kind, tt.target))
 			req := reconcile.Request{NamespacedName: types.NamespacedName{Name: "bad", Namespace: TestNamespace}}
 
-			if _, err := r.Reconcile(context.TODO(), req); err != nil {
-				t.Fatalf("invalid spec is permanent, should not be retried: %v", err)
+			_, err := r.Reconcile(context.TODO(), req)
+			if !errors.Is(err, reconcile.TerminalError(nil)) {
+				t.Fatalf("invalid spec is permanent: want a TerminalError (logged, not requeued), got %v", err)
 			}
 			name := types.NamespacedName{Name: r.getGeneratedResourceName("app"), Namespace: TestNamespace}
 			if err := c.Get(context.TODO(), name, &corev1.Secret{}); !apierrors.IsNotFound(err) {

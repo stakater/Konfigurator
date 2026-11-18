@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stakater/konfigurator/pkg/reconcileerr"
+
 	"github.com/stakater/konfigurator/api/v1alpha1"
 	"github.com/stakater/konfigurator/pkg/kube/lists/containers"
 	"github.com/stakater/konfigurator/pkg/kube/lists/volumes"
@@ -156,4 +158,15 @@ func verifyVolumeFound(mountManager *MountManager) bool {
 	}
 
 	return volumeFound
+}
+
+func TestMountVolumesUnknownContainerIsPermanent(t *testing.T) {
+	mm := NewManager("rendered", v1alpha1.RenderTargetConfigMap, testutil.GetDeployment("test"))
+	err := mm.MountVolumes([]v1alpha1.VolumeMount{{MountPath: "/x", Container: "does-not-exist"}})
+	if err == nil {
+		t.Fatal("expected an error for an unknown container")
+	}
+	if !reconcileerr.IsPermanent(err) {
+		t.Fatalf("an unknown container is the user's to fix, must be permanent: %v", err)
+	}
 }

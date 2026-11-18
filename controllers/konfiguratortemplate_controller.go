@@ -27,13 +27,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/stakater/konfigurator/pkg/kube"
+	"github.com/stakater/konfigurator/pkg/reconcileerr"
 	"github.com/stakater/konfigurator/pkg/template"
 	"github.com/stakater/konfigurator/pkg/webhook"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	k8sutils "github.com/stakater/konfigurator/pkg/utils/k8s"
 
@@ -110,10 +113,9 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, nil
 	}
 
-	// An invalid spec is permanent until the user edits it: log it, don't retry.
-	// (It is not surfaced in .status yet: review B4, story H.6.)
+	// An invalid spec is permanent until the user edits it.
 	if ok, err := instance.IsValid(); !ok {
-		return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		return fail(reconcileerr.Permanent(err))
 	}
 
 	// Add finalizer if it doesn't exist
@@ -122,9 +124,8 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 
 		finalizerUtil.AddFinalizer(instance, TemplateFinalizer)
 
-		err := r.Update(ctx, instance)
-		if err != nil {
-			return reconcilerUtil.ManageError(r.Client, instance, err, false)
+		if err := r.Update(ctx, instance); err != nil {
+			return fail(err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -135,22 +136,23 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
-	// Errors below are returned (isRetriable=true) so controller-runtime retries
-	// with exponential backoff: a webhook timeout, an API conflict, or an app that
-	// does not exist yet must not silently stop this template (review #166, B4).
+	// Every error goes through fail(): transient ones (webhook timeout, API
+	// conflict, app not there yet) are retried with backoff; permanent ones
+	// (template does not parse, webhook not allow-listed, container missing) are
+	// terminal, so they cannot starve the worker (review #166, B4).
 	log.Info("Rendering templates...")
 	if err := r.RenderTemplates(ctx, req, instance); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, true)
+		return fail(err)
 	}
 
 	log.Info("Creating resources...")
 	if err := r.CreateResources(instance.Spec.App.Name, instance.Namespace, instance.Spec.RenderTarget); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, true)
+		return fail(err)
 	}
 
 	log.Info("Mounting volumes...")
 	if err := r.MountVolumes(instance); err != nil {
-		return reconcilerUtil.ManageError(r.Client, instance, err, true)
+		return fail(err)
 	}
 	if instance.Spec.UpdateFrequency == 0 {
 		return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
@@ -169,44 +171,77 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 	//    means there is nothing left to unmount;
 	//  - delete the rendered object whenever the render target is valid, even if
 	//    app.kind is not: pre-H.1 operators rendered it before failing on the kind.
-	// Transient errors are returned (isRetriable=true) so the delete is retried
-	// instead of leaving the CR in Terminating until the next resync.
+	// Errors are returned through fail() so the delete is retried instead of
+	// leaving the CR in Terminating until the next resync.
 	if !instance.Spec.App.Kind.IsSupported() {
 		log.Info("Skipping unmount: unsupported app.kind " + string(instance.Spec.App.Kind))
 	} else if err := r.UnmountVolumes(instance); err != nil {
 		if !errors.IsNotFound(err) {
-			return reconcilerUtil.ManageError(r.Client, instance, err, true)
+			return fail(err)
 		}
 		log.Info("App not found; nothing to unmount")
 	}
 
 	if instance.Spec.RenderTarget.IsSupported() {
 		if err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
-			return reconcilerUtil.ManageError(r.Client, instance, err, true)
+			return fail(err)
 		}
-	} else {
-		// Pre-H.1 operators rendered a Secret for every target other than
-		// "ConfigMap", so that is the object a legacy invalid CR may have left.
-		log.Info("Unsupported renderTarget " + string(instance.Spec.RenderTarget) + ": removing the legacy rendered Secret if present")
-		if err := r.deleteSecret(instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
-			return reconcilerUtil.ManageError(r.Client, instance, err, true)
-		}
+	} else if err := r.deleteLegacySecret(ctx, instance.Spec.App.Name, instance.Namespace); err != nil {
+		return fail(err)
 	}
 
 	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
 	if err := r.Update(ctx, instance); err != nil {
 		if errors.IsInvalid(err) {
-			// Kubernetes < 1.30 has no CRD validation ratcheting: it re-validates
-			// the whole object on this update and rejects a legacy invalid spec,
-			// so the finalizer can never be removed by the operator.
-			err = fmt.Errorf("cannot remove finalizer: the API server rejected the object (%w); "+
-				"on Kubernetes < 1.30 edit spec.app.kind / spec.renderTarget to a supported value, then delete again", err)
+			// Typically Kubernetes < 1.30, which has no CRD validation ratcheting:
+			// it re-validates the whole object on this update and rejects a legacy
+			// invalid spec, so the operator can never remove the finalizer.
+			err = fmt.Errorf("cannot remove finalizer: the API server rejected the object (%w). "+
+				"If this is Kubernetes < 1.30, edit spec.app.kind to Deployment/DaemonSet/StatefulSet "+
+				"and/or spec.renderTarget to Secret (what pre-upgrade operators rendered for any other value), "+
+				"then delete again", err)
 		}
-		return reconcilerUtil.ManageError(r.Client, instance, err, true)
+		return fail(err)
 	}
 	log.Info(fmt.Sprintf("Deleted KonfiguratorTemplate: %v", instance.Name))
 
 	return ctrl.Result{}, nil
+}
+
+// fail maps a step error to the reconcile result. Permanent errors (see
+// pkg/reconcileerr) become reconcile.TerminalError: controller-runtime logs and
+// counts them but does not requeue, so a template that cannot work until a human
+// acts never starves the worker. Anything else is returned for backoff. Nothing is
+// written to .status yet (review B4, story H.6).
+func fail(err error) (ctrl.Result, error) {
+	if reconcileerr.IsPermanent(err) {
+		return ctrl.Result{}, reconcile.TerminalError(err)
+	}
+	return ctrl.Result{}, err
+}
+
+// deleteLegacySecret removes the Secret a pre-H.1 operator rendered for a CR whose
+// renderTarget is not supported (it fell through to a Secret for every value other
+// than "ConfigMap"). It only deletes a Secret this operator generated; the name is
+// shared with any valid template for the same app (S3, H.5), so that is the floor.
+func (r *KonfiguratorTemplateReconciler) deleteLegacySecret(ctx context.Context, appName, namespace string) error {
+	log := r.Log.WithValues("konfiguratortemplate", namespace)
+	secret := &corev1.Secret{}
+	name := types.NamespacedName{Name: r.getGeneratedResourceName(appName), Namespace: namespace}
+	switch err := r.Get(ctx, name, secret); {
+	case errors.IsNotFound(err):
+		return nil
+	case err != nil:
+		return err
+	case secret.Annotations[GeneratedByAnnotation] != "konfigurator":
+		log.Info("Leaving Secret " + name.Name + " in place: not generated by konfigurator")
+		return nil
+	}
+	log.Info("Unsupported renderTarget: removing the legacy rendered Secret " + name.Name)
+	if err := r.Delete(ctx, secret); err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 func (r *KonfiguratorTemplateReconciler) getGeneratedResourceName(name string) string {
