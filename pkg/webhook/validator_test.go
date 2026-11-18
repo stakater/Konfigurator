@@ -102,6 +102,24 @@ func TestValidate(t *testing.T) {
 			wantHits: []int32{1},
 		},
 		{
+			name: "bare host entry matches any port",
+			setup: func(t *testing.T) (string, []string, []*server) {
+				s := newServer(t, reply(`{"allowed":true}`))
+				u, _ := url.Parse(s.URL)
+				return s.URL, []string{u.Hostname()}, []*server{s}
+			},
+			wantHits: []int32{1},
+		},
+		{
+			name: "host:port entry pins the port",
+			setup: func(t *testing.T) (string, []string, []*server) {
+				s := newServer(t, reply(`{"allowed":true}`))
+				u, _ := url.Parse(s.URL)
+				return s.URL, []string{u.Hostname() + ":1"}, []*server{s}
+			},
+			wantErr: "not in the allowed", wantHits: []int32{0},
+		},
+		{
 			name:    "file scheme rejected",
 			setup:   func(t *testing.T) (string, []string, []*server) { return "file:///etc/passwd", []string{""}, nil },
 			wantErr: "scheme",

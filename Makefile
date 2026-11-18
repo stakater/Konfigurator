@@ -57,10 +57,6 @@ codegen-check: generate manifests ## Fail if generated code/manifests are out of
 fmt: ## Format the code.
 	go fmt ./...
 
-.PHONY: fmt-check
-fmt-check: ## Fail on unformatted Go files.
-	@out="$$(gofmt -l $$(git ls-files '*.go'))"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
-
 .PHONY: vet
 vet: ## Run go vet.
 	go vet ./...
@@ -79,7 +75,7 @@ unit-test: test
 # Definition of Done gate (docs/method.md). Run by the Claude Code PostToolUse hook
 # (hack/verify-hook.sh) after every Go edit, and in CI.
 .PHONY: verify
-verify: fmt-check vet ## fmt-check, vet, build, lint, test.
+verify: vet ## vet, build, lint (includes gofmt/goimports), test.
 	go build ./...
 	$(MAKE) lint
 	$(MAKE) test

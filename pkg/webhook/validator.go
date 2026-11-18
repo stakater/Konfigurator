@@ -29,8 +29,9 @@ var errRedirect = errors.New("redirects are not allowed")
 // nil *Validator) denies every call: webhooks must be explicitly enabled by the
 // operator admin through AllowedHosts.
 type Validator struct {
-	// AllowedHosts are exact hosts ("svc.ns.svc") or host:port entries, matched
-	// case-insensitively. Empty disables webhooks.
+	// AllowedHosts are matched case-insensitively against the URL. A bare host
+	// ("svc.ns.svc") allows that host on any port; a host:port entry
+	// ("svc.ns.svc:8443") allows only that port. Empty disables webhooks.
 	AllowedHosts     []string
 	Timeout          time.Duration
 	MaxResponseBytes int64
