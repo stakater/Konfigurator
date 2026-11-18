@@ -1,25 +1,28 @@
 package containers
 
 import (
-	"github.com/stakater/konfigurator/api/v1alpha1"
-	"k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type GetContainersFunc func(interface{}) []corev1.Container
 type ContainerFunc func(int, corev1.Container)
 
-var objectKindToContainersMap = map[string]GetContainersFunc{
-	string(v1alpha1.AppKindDeployment):  GetDeploymentContainers,
-	string(v1alpha1.AppKindDaemonSet):   GetDaemonSetContainers,
-	string(v1alpha1.AppKindStatefulSet): GetStatefulSetContainers,
-}
-
+// GetFromObject returns the pod-template containers of a Deployment, DaemonSet or
+// StatefulSet. It dispatches on the Go type, not TypeMeta: controller-runtime's
+// typed client clears TypeMeta after a Get (H.7). Unsupported types yield nil.
 func GetFromObject(target metav1.Object) []corev1.Container {
-	return objectKindToContainersMap[target.(runtime.Object).GetObjectKind().GroupVersionKind().Kind](target)
+	switch target.(type) {
+	case *v1.Deployment:
+		return GetDeploymentContainers(target)
+	case *v1.DaemonSet:
+		return GetDaemonSetContainers(target)
+	case *v1.StatefulSet:
+		return GetStatefulSetContainers(target)
+	}
+	return nil
 }
 
 func GetDeploymentContainers(target interface{}) []corev1.Container {

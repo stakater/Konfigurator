@@ -12,3 +12,6 @@ maintainers:
 - name: Stakater
   email: hello@stakater.com
 icon: https://raw.githubusercontent.com/stakater/Konfigurator/master/assets/web/Konfigurator-round-100px.png
+# Minimum: CRD validation ratcheting (default-on since 1.30) is required so legacy
+# CRs with an unsupported app.kind/renderTarget can still be deleted. OpenShift >= 4.17.
+kubeVersion: ">=1.30.0-0"

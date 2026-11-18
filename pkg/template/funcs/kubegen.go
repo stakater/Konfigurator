@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // combine multiple slices into a single slice
@@ -42,7 +42,7 @@ func values(input interface{}) (interface{}, error) {
 
 	value := reflect.ValueOf(input)
 	if value.Kind() != reflect.Map {
-		return nil, fmt.Errorf("Cannot call values on a non-map value: %v", input)
+		return nil, fmt.Errorf("cannot call values on a non-map value: %v", input)
 	}
 
 	keys := value.MapKeys()
@@ -97,8 +97,8 @@ func distinctPodsByOwner(pods []interface{}) []interface{} {
 
 func podWithOwnerExists(pods []interface{}, pod v1.Pod) bool {
 	for _, p := range pods {
-		for _, owner := range p.(v1.Pod).ObjectMeta.OwnerReferences {
-			for _, pOwner := range pod.ObjectMeta.OwnerReferences {
+		for _, owner := range p.(v1.Pod).OwnerReferences {
+			for _, pOwner := range pod.OwnerReferences {
 				// Namespace need to be same as well since owner with same name can exist in different namespaces
 				if owner.Name == pOwner.Name && p.(v1.Pod).Namespace == pod.Namespace {
 					return true
