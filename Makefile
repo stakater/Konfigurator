@@ -107,8 +107,10 @@ docker-push: ## Push the docker image.
 	docker push ${IMG}
 
 .PHONY: helm-lint
-helm-lint: ## Lint the Helm chart.
-	if [ -d charts ]; then helm lint charts/konfigurator; fi
+helm-lint: ## Lint the chart and render it as an upgrade with --reuse-values from a pre-H.2 release would.
+	helm lint charts/konfigurator
+	helm template charts/konfigurator --set validationWebhook=null >/dev/null
+	helm template charts/konfigurator --set 'validationWebhook.allowedHosts={a.svc,b.svc:8443}' | grep -q 'a.svc,b.svc:8443' 
 
 .PHONY: bump-chart
 bump-chart: ## Set chart version/appVersion/image tag to $(VERSION) (used by CI).

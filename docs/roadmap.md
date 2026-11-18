@@ -68,7 +68,9 @@ and controller-tools upgraded as a set; `make verify` (fmt · vet · build · li
 
 ### H.8 — Remaining correctness + hygiene (B7, B8, B9, B10, B11, S3, S6–S9, M8–M10) — 📝 Draft
 To be split into individual stories once H.1–H.7 are agreed. **B9 needs a product decision
-first:** either honor `PodMetadataInjector.spec` or remove those fields.
+first:** either honor `PodMetadataInjector.spec` or remove those fields. Also from the #166
+external review: a webhook dialer guard refusing loopback/link-local addresses (X5), and
+pinning actions to SHAs (X8/S8).
 
 ### H.9 — Adopt Stakater shared CI workflows — 📝 Draft · *needs a decision*
 As a **Stakater maintainer**, I want Konfigurator to build, test, and release through the shared

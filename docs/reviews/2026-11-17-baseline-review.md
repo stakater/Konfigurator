@@ -228,3 +228,18 @@ out of memory. ConfigMaps are capped at 1 MiB anyway, so output can be capped th
 3. **Toolchain + deps + `make verify`:** M1–M4. Before or alongside step 2, so the fixes land
    on a supported Go, with lint and govulncheck in CI.
 4. Then the rest: B7, B8, B9 (needs a decision), S3, S5–S8, M5–M9.
+
+## External review of PR #166 (aayeshaarshad, 2026-11-18)
+
+Independent review of the hardening PR; two findings reproduced on real clusters.
+
+| # | Finding | Outcome |
+|---|---|---|
+| X1 | On k8s < 1.30 (no CRD validation ratcheting) a legacy invalid CR can't be deleted after the CRD upgrade | **Decision (a):** minimum k8s 1.30 / OCP 4.17, enforced by chart `kubeVersion`; actionable 422 message; pre-upgrade check in `CHANGELOG.md` |
+| X2 | Delete/create errors never retried (`ManageError(..., false)`) | ✅ fixed: retriable on both paths; `IsValid` stays permanent. Status half of B4 → H.6 |
+| X3 | `helm upgrade --reuse-values` nil pointer on the new value | ✅ fixed (`default dict`); `make helm-lint` renders that case |
+| X4 | Legacy non-standard `renderTarget` left its rendered Secret | ✅ fixed: deleted on finalize |
+| X5 | Allow-list matches names not addresses; bare host = any port; proxy env applies | ✅ documented. Dialer guard (refuse loopback/link-local) → **H.8** (S2 residual) |
+| X6 | CI built amd64 only | ✅ fixed: `platforms: linux/amd64,linux/arm64` |
+| X7 | Committed `.claude/settings.json` hook affects every agent user | kept by design (method enforcement); opt-out documented in `CLAUDE.md` |
+| X8 | `@master` actions with `PUBLISH_TOKEN` | pre-existing → S8 / H.8 |

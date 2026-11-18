@@ -65,6 +65,7 @@ jobs:
       with:
         context: .
         file: ${{ env.DOCKER_FILE_PATH  }}
+        platforms: linux/amd64,linux/arm64
         pull: true
         push: true
         build-args: GIT_ACCESS_TOKEN=${{ secrets.PUBLISH_TOKEN }}

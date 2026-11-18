@@ -15,7 +15,9 @@ StatefulSet. The canonical use case is generating fluentd config per pod (`examp
   - **`KonfiguratorTemplate`**: the main feature.
   - **`PodMetadataInjector`**: injects annotations into pods *in the render context only*. It
     never patches real pods.
-- Stack: **Go 1.27.4 · controller-runtime v0.25 · k8s libs v0.37** (upgraded in H.7). Legacy
+- Stack: **Go 1.27.4 · controller-runtime v0.25 · k8s libs v0.37** (upgraded in H.7).
+  **Minimum cluster: Kubernetes 1.30 / OpenShift 4.17** (CRD validation ratcheting; chart
+  `kubeVersion`). User-visible changes go in `CHANGELOG.md` → *Unreleased*, with upgrade notes. Legacy
   upstream project (last functional work in 2021). **It is being hardened before new feature
   work.** See `docs/reviews/2026-11-17-baseline-review.md`
   and roadmap Epic H.
@@ -54,8 +56,9 @@ a roadmap story.
 - **The render context is a hand-rolled, unlocked mirror of the informer cache** (B2). Deleted
   objects are never evicted (B1). The planned fix is to *delete* it and `List` from the
   manager cache (H.5). **Don't add more state to `xContext.Context`.**
-- `ManageError(..., false)` means **no requeue and no status** (B4). Errors are silently
-  dropped.
+- `ManageError(..., isRetriable)`: `false` means **no requeue and no status**, `true` returns
+  the error for backoff **but still no status** (`KonfiguratorTemplate` isn't
+  `ConditionsStatusAware`, B4/H.6). Only `IsValid()` failures use `false`: they are permanent.
 - ~~An unknown `app.kind` causes a nil-interface panic and a crash-loop (B3).~~ Fixed in H.1
   (CRD enums + `IsValid` + `RecoverPanic`). Keep it that way: every user-supplied field gets a
   validation marker.
@@ -102,7 +105,9 @@ supersede, never edit).
 
 `make verify` runs **vet · build · lint (golangci-lint v2, `.golangci.yml`; formatting is
 enforced here via gofmt/goimports) · `go test -race`**. CI also runs `make codegen-check vulncheck` and an e2e job (`make e2e`). A Claude Code **PostToolUse hook** (`.claude/settings.json` →
-`hack/verify-hook.sh`) runs it after every `*.go`/`go.mod`/`go.sum` edit. Don't report work
+`hack/verify-hook.sh`) runs it after every `*.go`/`go.mod`/`go.sum` edit. It is committed on
+purpose (same as kube-ward): the hook is how the DoD is enforced in agent sessions. To opt out
+locally, set `"disableAllHooks": true` in `.claude/settings.local.json`. Don't report work
 done without seeing it green.
 
 Other targets (`make help` lists all of them). Tools are **pinned in the Makefile** and

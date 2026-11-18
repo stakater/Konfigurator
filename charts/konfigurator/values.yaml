@@ -12,11 +12,16 @@ env:
       fieldPath: metadata.namespace
 replicaCount: 1
 
-# Hosts a KonfiguratorTemplate's spec.validationWebhookURL may call. A bare host
-# (my-validator.my-ns.svc) allows any port on that host; host:port
-# (my-validator.my-ns.svc:8443) allows only that port. Empty = validation
-# webhooks disabled: templates that set validationWebhookURL fail to render.
-# Set by the cluster admin, never by template authors (SSRF protection).
+# Hosts a KonfiguratorTemplate's spec.validationWebhookURL may call. Empty =
+# validation webhooks disabled: templates that set validationWebhookURL fail to
+# render (and are retried with backoff). Set by the cluster admin, never by
+# template authors (SSRF protection). Semantics:
+# - Matching is by host NAME, not resolved address: whoever can edit an
+#   allow-listed Service (e.g. switch it to ExternalName) controls the destination.
+#   Allow-list only Services you control.
+# - A bare host (my-validator.my-ns.svc) allows every port on that host; prefer
+#   host:port (my-validator.my-ns.svc:8443) to pin one.
+# - The operator's HTTP_PROXY / HTTPS_PROXY / NO_PROXY apply to the call.
 validationWebhook:
   allowedHosts: []
 

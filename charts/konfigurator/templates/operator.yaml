@@ -34,7 +34,7 @@ spec:
           env:
           - name: OPERATOR_NAME
             value: "{{ template "konfigurator.name" . }}"
-          {{- with .Values.validationWebhook.allowedHosts }}
+          {{- with (.Values.validationWebhook | default dict).allowedHosts }}
           - name: VALIDATION_WEBHOOK_ALLOWED_HOSTS
             value: {{ join "," . | quote }}
           {{- end }}
