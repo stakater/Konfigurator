@@ -41,7 +41,6 @@ import (
 	k8sutils "github.com/stakater/konfigurator/pkg/utils/k8s"
 
 	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
-	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 
 	v1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	xContext "github.com/stakater/konfigurator/pkg/context"
@@ -97,8 +96,8 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		// Error reading the object - requeue the request.
-		return reconcilerUtil.RequeueWithError(err)
+		// Error reading the object: return it so the request is requeued with backoff.
+		return ctrl.Result{}, err
 	}
 
 	// Resource is marked for deletion. Handled before validation so that an
@@ -115,7 +114,7 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 
 	// An invalid spec is permanent until the user edits it.
 	if ok, err := instance.IsValid(); !ok {
-		return fail(reconcileerr.Permanent(err))
+		return r.fail(log, instance, reconcileerr.Permanent(err))
 	}
 
 	// Add finalizer if it doesn't exist
@@ -125,7 +124,7 @@ func (r *KonfiguratorTemplateReconciler) Reconcile(ctx context.Context, req ctrl
 		finalizerUtil.AddFinalizer(instance, TemplateFinalizer)
 
 		if err := r.Update(ctx, instance); err != nil {
-			return fail(err)
+			return r.fail(log, instance, err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -136,29 +135,23 @@ func (r *KonfiguratorTemplateReconciler) handleCreate(ctx context.Context, req c
 	log := r.Log.WithValues("konfiguratortemplate", req.NamespacedName)
 	log.Info(fmt.Sprintf("Initiating sync for KonfiguratorTemplate: %v", instance.Name))
 
-	// Every error goes through fail(): transient ones (webhook timeout, API
-	// conflict, app not there yet) are retried with backoff; permanent ones
-	// (template does not parse, webhook not allow-listed, container missing) are
-	// terminal, so they cannot starve the worker (review #166, B4).
+	// Every error goes through r.fail(), which decides between backoff, the next
+	// render cycle, and terminal (review #166, B4). See fail().
 	log.Info("Rendering templates...")
 	if err := r.RenderTemplates(ctx, req, instance); err != nil {
-		return fail(err)
+		return r.fail(log, instance, err)
 	}
 
 	log.Info("Creating resources...")
 	if err := r.CreateResources(instance.Spec.App.Name, instance.Namespace, instance.Spec.RenderTarget); err != nil {
-		return fail(err)
+		return r.fail(log, instance, err)
 	}
 
 	log.Info("Mounting volumes...")
 	if err := r.MountVolumes(instance); err != nil {
-		return fail(err)
+		return r.fail(log, instance, err)
 	}
-	if instance.Spec.UpdateFrequency == 0 {
-		return reconcilerUtil.RequeueAfter(DefaultRequeueTime)
-	}
-
-	return reconcilerUtil.RequeueAfter(time.Duration(instance.Spec.UpdateFrequency) * time.Minute)
+	return ctrl.Result{RequeueAfter: renderInterval(instance)}, nil
 }
 
 func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req ctrl.Request, instance *v1alpha1.KonfiguratorTemplate) (ctrl.Result, error) {
@@ -177,17 +170,17 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 		log.Info("Skipping unmount: unsupported app.kind " + string(instance.Spec.App.Kind))
 	} else if err := r.UnmountVolumes(instance); err != nil {
 		if !errors.IsNotFound(err) {
-			return fail(err)
+			return r.fail(log, instance, err)
 		}
 		log.Info("App not found; nothing to unmount")
 	}
 
 	if instance.Spec.RenderTarget.IsSupported() {
 		if err := r.DeleteResources(instance.Spec.RenderTarget, instance.Spec.App.Name, instance.Namespace); err != nil && !errors.IsNotFound(err) {
-			return fail(err)
+			return r.fail(log, instance, err)
 		}
 	} else if err := r.deleteLegacySecret(ctx, instance.Spec.App.Name, instance.Namespace); err != nil {
-		return fail(err)
+		return r.fail(log, instance, err)
 	}
 
 	finalizerUtil.DeleteFinalizer(instance, TemplateFinalizer)
@@ -201,23 +194,44 @@ func (r *KonfiguratorTemplateReconciler) handleDelete(ctx context.Context, req c
 				"and/or spec.renderTarget to Secret (what pre-upgrade operators rendered for any other value), "+
 				"then delete again", err)
 		}
-		return fail(err)
+		return r.fail(log, instance, err)
 	}
 	log.Info(fmt.Sprintf("Deleted KonfiguratorTemplate: %v", instance.Name))
 
 	return ctrl.Result{}, nil
 }
 
-// fail maps a step error to the reconcile result. Permanent errors (see
-// pkg/reconcileerr) become reconcile.TerminalError: controller-runtime logs and
-// counts them but does not requeue, so a template that cannot work until a human
-// acts never starves the worker. Anything else is returned for backoff. Nothing is
-// written to .status yet (review B4, story H.6).
-func fail(err error) (ctrl.Result, error) {
-	if reconcileerr.IsPermanent(err) {
+// fail maps a step error to the reconcile result (classes: pkg/reconcileerr).
+//   - permanent  → reconcile.TerminalError: logged and counted by controller-runtime,
+//     not requeued. Only a CR edit or a restart can fix it, and both re-trigger the
+//     template, so retrying would only burn the worker.
+//   - next cycle → logged, nil error, RequeueAfter(render interval). The error depends
+//     on cluster state nothing watches (an empty Pods list during a rollout, a webhook
+//     that says no to this content, a container a GitOps sync adds later). Keeping the
+//     normal render rhythm lets the template recover by itself, without a backoff
+//     storm and without freezing until a human acts.
+//   - anything else → returned for backoff (transient: timeout, 5xx, API conflict).
+//
+// Nothing is written to .status yet (review B4, story H.6).
+func (r *KonfiguratorTemplateReconciler) fail(log logr.Logger, instance *v1alpha1.KonfiguratorTemplate, err error) (ctrl.Result, error) {
+	switch {
+	case reconcileerr.IsPermanent(err):
 		return ctrl.Result{}, reconcile.TerminalError(err)
+	case reconcileerr.IsNextCycle(err):
+		after := renderInterval(instance)
+		log.Info("Reconcile failed on current cluster state; retrying at the next render cycle", "error", err.Error(), "after", after.String())
+		return ctrl.Result{RequeueAfter: after}, nil
 	}
 	return ctrl.Result{}, err
+}
+
+// renderInterval is the periodic re-render interval from spec.updateFrequency
+// (minutes); zero or negative means the default.
+func renderInterval(instance *v1alpha1.KonfiguratorTemplate) time.Duration {
+	if instance.Spec.UpdateFrequency <= 0 {
+		return DefaultRequeueTime
+	}
+	return time.Duration(instance.Spec.UpdateFrequency) * time.Minute
 }
 
 // deleteLegacySecret removes the Secret a pre-H.1 operator rendered for a CR whose

@@ -23,8 +23,11 @@ func ExecuteFile(path string, data interface{}) ([]byte, error) {
 	return executeTemplate(template, data)
 }
 
-// ExecuteString executes a template string with the specified data. Errors are
-// marked permanent: only the template author can fix them, retrying cannot.
+// ExecuteString executes a template string with the specified data.
+//
+// A parse error is permanent: only the author can fix it. An execute error is
+// next-cycle: it depends on the data, which is live cluster state (an empty Pods
+// list during a rollout makes `index .Pods 0` fail, then succeed a minute later).
 func ExecuteString(text string, data interface{}) ([]byte, error) {
 	template, err := newTemplate("stdin").Parse(text)
 	if err != nil {
@@ -32,7 +35,7 @@ func ExecuteString(text string, data interface{}) ([]byte, error) {
 	}
 
 	out, err := executeTemplate(template, data)
-	return out, reconcileerr.Permanent(err)
+	return out, reconcileerr.NextCycle(err)
 }
 
 // Helper for ExecuteFile and ExecuteString - actually executes the template

@@ -55,8 +55,11 @@ func TestValidate(t *testing.T) {
 		setup   func(t *testing.T) (target string, allowed []string, watched []*server)
 		ctx     func() context.Context
 		wantErr string // substring; "" means success
-		// permanent: the reconciler must not retry this (config/contract failure).
+		// permanent: only a CR edit fixes it (bad URL/scheme, host not allowed, redirect).
+		// nextCycle: depends on the rendered content or the server's reply right now
+		// (allowed:false, oversized or non-JSON 2xx): re-render at the next cycle.
 		permanent bool
+		nextCycle bool
 		wantHits  []int32
 	}{
 		{
@@ -79,7 +82,7 @@ func TestValidate(t *testing.T) {
 				s := newServer(t, reply(`{"allowed":false,"message":"bad regex"}`))
 				return s.URL, []string{s.host(t)}, []*server{s}
 			},
-			permanent: true, wantErr: "bad regex", wantHits: []int32{1},
+			nextCycle: true, wantErr: "bad regex", wantHits: []int32{1},
 		},
 		{
 			name: "host not on allow-list is never contacted",
@@ -152,7 +155,18 @@ func TestValidate(t *testing.T) {
 				s := newServer(t, reply(`{"allowed":true,"message":"`+strings.Repeat("x", 2048)+`"}`))
 				return s.URL, []string{s.host(t)}, []*server{s}
 			},
-			permanent: true, wantErr: "exceeds", wantHits: []int32{1},
+			nextCycle: true, wantErr: "exceeds", wantHits: []int32{1},
+		},
+		{
+			name: "non-JSON 2xx reply (e.g. a proxy maintenance page) is next-cycle",
+			setup: func(t *testing.T) (string, []string, []*server) {
+				s := newServer(t, func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "text/html")
+					_, _ = w.Write([]byte("<html>maintenance</html>"))
+				})
+				return s.URL, []string{s.host(t)}, []*server{s}
+			},
+			nextCycle: true, wantErr: "decoding failed", wantHits: []int32{1},
 		},
 		{
 			name: "redirect is refused and target never contacted",
@@ -213,8 +227,13 @@ func TestValidate(t *testing.T) {
 			case tt.wantErr != "" && !strings.Contains(err.Error(), tt.wantErr):
 				t.Fatalf("error %q does not contain %q", err, tt.wantErr)
 			}
-			if err != nil && reconcileerr.IsPermanent(err) != tt.permanent {
-				t.Fatalf("permanent = %v, want %v for %v", !tt.permanent, tt.permanent, err)
+			if err != nil {
+				if got := reconcileerr.IsPermanent(err); got != tt.permanent {
+					t.Fatalf("permanent = %v, want %v for %v", got, tt.permanent, err)
+				}
+				if got := reconcileerr.IsNextCycle(err); got != tt.nextCycle {
+					t.Fatalf("nextCycle = %v, want %v for %v", got, tt.nextCycle, err)
+				}
 			}
 			for i, s := range watched {
 				if got := atomic.LoadInt32(&s.hits); got != tt.wantHits[i] {

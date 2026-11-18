@@ -179,5 +179,5 @@ func (mm *MountManager) findContainerWithName(name string) (*corev1.Container, e
 			return &container, nil
 		}
 	}
-	return nil, reconcileerr.Permanent(fmt.Errorf("cannot find container with name: %s", name))
+	return nil, reconcileerr.NextCycle(fmt.Errorf("cannot find container with name: %s", name))
 }

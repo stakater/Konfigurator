@@ -29,18 +29,37 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
+	xContext "github.com/stakater/konfigurator/pkg/context"
 	"github.com/stakater/konfigurator/pkg/webhook"
 )
 
 // Every failure point of the KonfiguratorTemplate reconciler, with an injected
-// fault and the expected classification (PR #166 review, round 3):
-//   - terminal: the error is permanent until a human changes something, so it is
-//     returned as reconcile.TerminalError (logged, counted, NOT requeued);
-//   - retry: transient, returned plainly so controller-runtime backs off.
-// A retry storm from permanent errors would starve the single worker; a swallowed
-// transient error leaves a CR stuck. Both are bugs, so both directions are pinned.
+// fault and the expected outcome (PR #166 review, rounds 3 and 4):
+//   - terminal:  only a CR edit or restart can fix it, and both re-trigger the
+//     template, so it is returned as reconcile.TerminalError (logged, counted,
+//     NOT requeued);
+//   - nextCycle: depends on cluster state nothing watches (empty Pods list,
+//     webhook allowed:false, container not there yet): nil error and
+//     RequeueAfter(updateFrequency), so the template keeps its render rhythm and
+//     recovers by itself;
+//   - retry:     transient, returned plainly so controller-runtime backs off.
+//
+// A retry storm starves the single worker; a swallowed error leaves a CR stuck; a
+// terminal error on state freezes a template until a human acts. All three are
+// bugs, so all three directions are pinned. hack/mutation-check.sh proves each
+// error site is covered.
 
 const appName = "app"
+
+type outcome int
+
+const (
+	retry outcome = iota
+	terminal
+	nextCycle
+)
+
+func (o outcome) String() string { return [...]string{"retry", "terminal", "nextCycle"}[o] }
 
 var (
 	templateGR = schema.GroupResource{Group: "konfigurator.stakater.com", Resource: "konfiguratortemplates"}
@@ -58,9 +77,19 @@ func onTemplate(o client.Object) bool {
 }
 func onDeployment(o client.Object) bool { _, ok := o.(*appsv1.Deployment); return ok }
 func onSecret(o client.Object) bool     { _, ok := o.(*corev1.Secret); return ok }
+func onConfigMap(o client.Object) bool  { _, ok := o.(*corev1.ConfigMap); return ok }
 
-func faults(update, create, del *fault) interceptor.Funcs {
+// faults builds interceptors; a nil fault leaves that verb untouched.
+func faults(get, update, create, del *fault) interceptor.Funcs {
 	f := interceptor.Funcs{}
+	if get != nil {
+		f.Get = func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if get.match(obj) {
+				return get.err
+			}
+			return c.Get(ctx, key, obj, opts...)
+		}
+	}
 	if update != nil {
 		f.Update = func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 			if update.match(obj) {
@@ -115,6 +144,23 @@ func noFinalizer(tpl *konfiguratorv1alpha1.KonfiguratorTemplate) { tpl.Finalizer
 func withWebhook(tpl *konfiguratorv1alpha1.KonfiguratorTemplate) {
 	tpl.Spec.ValidationWebhookURL = "http://validator.example.svc/validate"
 }
+func templates(text string) tplOpt {
+	return func(tpl *konfiguratorv1alpha1.KonfiguratorTemplate) {
+		tpl.Spec.Templates = map[string]string{"a": text}
+	}
+}
+func every(minutes int) tplOpt {
+	return func(tpl *konfiguratorv1alpha1.KonfiguratorTemplate) { tpl.Spec.UpdateFrequency = minutes }
+}
+func toConfigMap(tpl *konfiguratorv1alpha1.KonfiguratorTemplate) {
+	tpl.Spec.RenderTarget = konfiguratorv1alpha1.RenderTargetConfigMap
+}
+
+func legacyInvalidTarget() *konfiguratorv1alpha1.KonfiguratorTemplate {
+	tpl := invalidTemplate(konfiguratorv1alpha1.AppKindDeployment, "configmap")
+	deleting(tpl)
+	return tpl
+}
 
 // deployment returns the target workload; mounted=true means the rendered
 // volume is already attached, so an unmount actually changes (and Updates) it.
@@ -135,7 +181,8 @@ func newReconciler(f interceptor.Funcs, objs ...runtime.Object) *KonfiguratorTem
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(konfiguratorv1alpha1.AddToScheme(scheme))
 	c := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objs...).WithInterceptorFuncs(f).Build()
-	return &KonfiguratorTemplateReconciler{Client: c, Scheme: scheme, Log: ctrl.Log.WithName("test")}
+	// An empty render context: the operator just started, or every pod is gone.
+	return &KonfiguratorTemplateReconciler{Client: c, Scheme: scheme, Log: ctrl.Log.WithName("test"), XContext: &xContext.Context{}}
 }
 
 func webhookServer(t *testing.T, h http.HandlerFunc) (*webhook.Validator, string) {
@@ -146,73 +193,83 @@ func webhookServer(t *testing.T, h http.HandlerFunc) (*webhook.Validator, string
 	return &webhook.Validator{AllowedHosts: []string{u.Host}, Timeout: 100 * time.Millisecond}, s.URL
 }
 
+func replying(body string, status int) func(*testing.T) (*webhook.Validator, string) {
+	return func(t *testing.T) (*webhook.Validator, string) {
+		return webhookServer(t, func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte(body))
+		})
+	}
+}
+
+func hanging(t *testing.T) (*webhook.Validator, string) {
+	return webhookServer(t, func(w http.ResponseWriter, r *http.Request) {
+		// Drain the body so the server detects the client hanging up (it only
+		// starts its background read after the body is consumed); bound the wait
+		// so a failing test cannot hang Server.Close.
+		_, _ = io.Copy(io.Discard, r.Body)
+		select {
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
+	})
+}
+
 func TestReconcileFailureClassification(t *testing.T) {
 	tests := []struct {
-		name     string
-		tpl      *konfiguratorv1alpha1.KonfiguratorTemplate
-		objs     []runtime.Object
-		faults   interceptor.Funcs
-		webhook  func(t *testing.T) (*webhook.Validator, string) // optional; URL overrides spec
-		terminal bool
+		name    string
+		tpl     *konfiguratorv1alpha1.KonfiguratorTemplate
+		objs    []runtime.Object
+		faults  interceptor.Funcs
+		webhook func(t *testing.T) (*webhook.Validator, string) // optional; a URL overrides the spec
+		want    outcome
+		after   time.Duration // nextCycle only; 0 means DefaultRequeueTime
 	}{
 		// ---- create path
-		{name: "invalid spec", tpl: invalidTemplate("Job", konfiguratorv1alpha1.RenderTargetSecret), terminal: true},
-		{name: "webhook host refused", tpl: validTemplate(withWebhook),
-			webhook:  func(*testing.T) (*webhook.Validator, string) { return &webhook.Validator{}, "" },
-			terminal: true},
-		{name: "webhook says allowed:false", tpl: validTemplate(withWebhook),
-			webhook: func(t *testing.T) (*webhook.Validator, string) {
-				return webhookServer(t, func(w http.ResponseWriter, _ *http.Request) {
-					_, _ = w.Write([]byte(`{"allowed":false,"message":"bad"}`))
-				})
-			},
-			terminal: true},
-		{name: "webhook timeout", tpl: validTemplate(withWebhook),
-			webhook: func(t *testing.T) (*webhook.Validator, string) {
-				return webhookServer(t, func(w http.ResponseWriter, r *http.Request) {
-					// Drain the body so the server detects the client hanging up
-					// (it only starts its background read after the body is consumed);
-					// bound the wait so a failing test cannot hang Server.Close.
-					_, _ = io.Copy(io.Discard, r.Body)
-					select {
-					case <-r.Context().Done():
-					case <-time.After(2 * time.Second):
-					}
-				})
-			},
-			terminal: false},
-		{name: "webhook 5xx", tpl: validTemplate(withWebhook),
-			webhook: func(t *testing.T) (*webhook.Validator, string) {
-				return webhookServer(t, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) })
-			},
-			terminal: false},
-		{name: "template parse error", tpl: validTemplate(func(tpl *konfiguratorv1alpha1.KonfiguratorTemplate) {
-			tpl.Spec.Templates = map[string]string{"a": "{{ .Pods "}
-		}), terminal: true},
-		{name: "rendered object create fails", tpl: validTemplate(), objs: []runtime.Object{deployment(appName, false)},
-			faults: faults(nil, &fault{onSecret, internal}, nil), terminal: false},
-		{name: "app not found yet", tpl: validTemplate(), terminal: false},
-		{name: "container not found", tpl: validTemplate(), objs: []runtime.Object{deployment("other", false)}, terminal: true},
-		{name: "app update conflict", tpl: validTemplate(), objs: []runtime.Object{deployment(appName, false)},
-			faults: faults(&fault{onDeployment, apierrors.NewConflict(templateGR, appName, nil)}, nil, nil), terminal: false},
+		{name: "template Get fails", tpl: validTemplate(),
+			faults: faults(&fault{onTemplate, internal}, nil, nil, nil), want: retry},
+		{name: "invalid spec", tpl: invalidTemplate("Job", konfiguratorv1alpha1.RenderTargetSecret), want: terminal},
 		{name: "finalizer add fails", tpl: validTemplate(noFinalizer),
-			faults: faults(&fault{onTemplate, internal}, nil, nil), terminal: false},
+			faults: faults(nil, &fault{onTemplate, internal}, nil, nil), want: retry},
+		{name: "template parse error", tpl: validTemplate(templates("{{ .Pods ")), want: terminal},
+		{name: "template execute error on empty live state (index .Pods 0)",
+			tpl: validTemplate(templates("{{ (index .Pods 0).Name }}")), want: nextCycle},
+		{name: "template execute error honours updateFrequency",
+			tpl: validTemplate(templates("{{ (index .Pods 0).Name }}"), every(3)), want: nextCycle, after: 3 * time.Minute},
+		{name: "webhook host refused", tpl: validTemplate(withWebhook),
+			webhook: func(*testing.T) (*webhook.Validator, string) { return &webhook.Validator{}, "" }, want: terminal},
+		{name: "webhook says allowed:false (depends on rendered content)", tpl: validTemplate(withWebhook),
+			webhook: replying(`{"allowed":false,"message":"bad"}`, http.StatusOK), want: nextCycle},
+		{name: "webhook non-JSON 2xx reply", tpl: validTemplate(withWebhook),
+			webhook: replying("<html>maintenance</html>", http.StatusOK), want: nextCycle},
+		{name: "webhook timeout", tpl: validTemplate(withWebhook), webhook: hanging, want: retry},
+		{name: "webhook 5xx", tpl: validTemplate(withWebhook),
+			webhook: replying("", http.StatusInternalServerError), want: retry},
+		{name: "rendered Secret create fails", tpl: validTemplate(), objs: []runtime.Object{deployment(appName, false)},
+			faults: faults(nil, nil, &fault{onSecret, internal}, nil), want: retry},
+		{name: "rendered ConfigMap create fails", tpl: validTemplate(toConfigMap), objs: []runtime.Object{deployment(appName, false)},
+			faults: faults(nil, nil, &fault{onConfigMap, internal}, nil), want: retry},
+		{name: "app Get fails", tpl: validTemplate(), objs: []runtime.Object{deployment(appName, false)},
+			faults: faults(&fault{onDeployment, internal}, nil, nil, nil), want: retry},
+		{name: "app not found yet", tpl: validTemplate(), want: retry},
+		{name: "container not there yet (GitOps may add it)", tpl: validTemplate(),
+			objs: []runtime.Object{deployment("other", false)}, want: nextCycle},
+		{name: "app update conflict", tpl: validTemplate(), objs: []runtime.Object{deployment(appName, false)},
+			faults: faults(nil, &fault{onDeployment, apierrors.NewConflict(templateGR, appName, nil)}, nil, nil), want: retry},
 		// ---- delete path
 		{name: "delete: unmount update conflict", tpl: validTemplate(deleting), objs: []runtime.Object{deployment(appName, true)},
-			faults: faults(&fault{onDeployment, apierrors.NewConflict(templateGR, appName, nil)}, nil, nil), terminal: false},
+			faults: faults(nil, &fault{onDeployment, apierrors.NewConflict(templateGR, appName, nil)}, nil, nil), want: retry},
 		{name: "delete: rendered object delete fails", tpl: validTemplate(deleting),
 			objs:   []runtime.Object{&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "konfigurator-app-rendered", Namespace: TestNamespace}}},
-			faults: faults(nil, nil, &fault{onSecret, internal}), terminal: false},
-		{name: "delete: legacy secret delete fails", tpl: func() *konfiguratorv1alpha1.KonfiguratorTemplate {
-			tpl := invalidTemplate(konfiguratorv1alpha1.AppKindDeployment, "configmap")
-			deleting(tpl)
-			return tpl
-		}(),
+			faults: faults(nil, nil, nil, &fault{onSecret, internal}), want: retry},
+		{name: "delete: legacy secret Get fails", tpl: legacyInvalidTarget(),
+			faults: faults(&fault{onSecret, internal}, nil, nil, nil), want: retry},
+		{name: "delete: legacy secret delete fails", tpl: legacyInvalidTarget(),
 			objs: []runtime.Object{&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "konfigurator-app-rendered", Namespace: TestNamespace,
 				Annotations: map[string]string{GeneratedByAnnotation: "konfigurator"}}}},
-			faults: faults(nil, nil, &fault{onSecret, internal}), terminal: false},
+			faults: faults(nil, nil, nil, &fault{onSecret, internal}), want: retry},
 		{name: "delete: finalizer removal conflict", tpl: validTemplate(deleting),
-			faults: faults(&fault{onTemplate, apierrors.NewConflict(templateGR, "tpl", nil)}, nil, nil), terminal: false},
+			faults: faults(nil, &fault{onTemplate, apierrors.NewConflict(templateGR, "tpl", nil)}, nil, nil), want: retry},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -230,12 +287,29 @@ func TestReconcileFailureClassification(t *testing.T) {
 			}
 			req := reconcile.Request{NamespacedName: types.NamespacedName{Name: tpl.Name, Namespace: TestNamespace}}
 
-			_, err := r.Reconcile(context.TODO(), req)
-			if err == nil {
-				t.Fatal("expected an error to be returned, got nil (swallowed)")
+			res, err := r.Reconcile(context.TODO(), req)
+			var got outcome
+			switch {
+			case err == nil && res.RequeueAfter > 0:
+				got = nextCycle
+			case err == nil:
+				t.Fatal("nil error and no RequeueAfter: the failure was swallowed")
+			case errors.Is(err, reconcile.TerminalError(nil)):
+				got = terminal
+			default:
+				got = retry
 			}
-			if got := errors.Is(err, reconcile.TerminalError(nil)); got != tt.terminal {
-				t.Fatalf("terminal = %v, want %v; err: %v", got, tt.terminal, err)
+			if got != tt.want {
+				t.Fatalf("outcome = %s, want %s; res=%+v err=%v", got, tt.want, res, err)
+			}
+			if tt.want == nextCycle {
+				want := DefaultRequeueTime
+				if tt.after > 0 {
+					want = tt.after
+				}
+				if res.RequeueAfter != want {
+					t.Fatalf("RequeueAfter = %v, want the render interval %v", res.RequeueAfter, want)
+				}
 			}
 		})
 	}
@@ -248,7 +322,7 @@ func TestReconcileFailureClassification(t *testing.T) {
 func TestDeleteRejectedByValidationExplainsTheFix(t *testing.T) {
 	invalid := apierrors.NewInvalid(schema.GroupKind{Group: "konfigurator.stakater.com", Kind: "KonfiguratorTemplate"}, "tpl",
 		field.ErrorList{field.NotSupported(field.NewPath("spec", "app", "kind"), "Job", []string{"Deployment"})})
-	r := newReconciler(faults(&fault{onTemplate, invalid}, nil, nil), validTemplate(deleting))
+	r := newReconciler(faults(nil, &fault{onTemplate, invalid}, nil, nil), validTemplate(deleting))
 
 	_, err := r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "tpl", Namespace: TestNamespace}})
 	if err == nil {

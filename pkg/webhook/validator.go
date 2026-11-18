@@ -50,10 +50,12 @@ type response struct {
 // 2xx with {"allowed": true}. Nothing is sent unless the URL is http(s) and its
 // host is allow-listed.
 //
-// Errors are classified for the reconciler: configuration and contract failures
-// (bad URL, host not allowed, redirect, oversized or malformed reply, allowed:false)
-// are reconcileerr.Permanent; network failures and non-2xx replies are left plain
-// so they are retried.
+// Errors are classified for the reconciler (pkg/reconcileerr): configuration
+// failures only a CR edit or the admin can fix (bad URL or scheme, host not
+// allowed, redirect) are Permanent; failures that depend on the rendered content
+// or on the server's reply right now (allowed:false, an oversized or non-JSON 2xx
+// such as a proxy maintenance page) are NextCycle; network failures and non-2xx
+// replies are left plain so they are retried with backoff.
 func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[string]string) error {
 	u, err := url.ParseRequestURI(rawURL)
 	if err != nil {
@@ -98,7 +100,7 @@ func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[st
 		return fmt.Errorf("webhook response read failed: %w", err)
 	}
 	if int64(len(raw)) > limit {
-		return reconcileerr.Permanent(fmt.Errorf("webhook response exceeds %d bytes", limit))
+		return reconcileerr.NextCycle(fmt.Errorf("webhook response exceeds %d bytes", limit))
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
@@ -106,10 +108,10 @@ func (v *Validator) Validate(ctx context.Context, rawURL string, rendered map[st
 
 	var res response
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return reconcileerr.Permanent(fmt.Errorf("webhook response decoding failed: %w", err))
+		return reconcileerr.NextCycle(fmt.Errorf("webhook response decoding failed: %w", err))
 	}
 	if !res.Allowed {
-		return reconcileerr.Permanent(fmt.Errorf("template is invalid: %s", res.Message))
+		return reconcileerr.NextCycle(fmt.Errorf("template is invalid: %s", res.Message))
 	}
 	return nil
 }

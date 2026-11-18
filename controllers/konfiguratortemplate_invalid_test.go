@@ -107,3 +107,14 @@ func TestDeleteInvalidTemplateRemovesFinalizer(t *testing.T) {
 		})
 	}
 }
+
+// fetchAppObject keeps its own kind check even though IsValid() runs first
+// (defense in depth); pin it directly since no reconcile path can reach it.
+func TestFetchAppObjectRejectsUnsupportedKind(t *testing.T) {
+	r, _ := newTemplateReconciler()
+	r.KContext = context.TODO()
+	obj, err := r.fetchAppObject(konfiguratorv1alpha1.App{Name: "x", Kind: "Job"}, TestNamespace)
+	if err == nil || obj != nil {
+		t.Fatalf("want an error and no object for an unsupported kind, got obj=%v err=%v", obj, err)
+	}
+}
