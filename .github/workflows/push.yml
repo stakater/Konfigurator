@@ -68,7 +68,6 @@ jobs:
         platforms: linux/amd64,linux/arm64
         pull: true
         push: true
-        build-args: GIT_ACCESS_TOKEN=${{ secrets.PUBLISH_TOKEN }}
         cache-to: type=inline
         tags: |
           ${{ env.IMAGE_REPOSITORY }}:${{ steps.generate_tag.outputs.new_tag }}
@@ -101,7 +100,8 @@ jobs:
 
     # Publish helm chart
     - name: Publish Helm chart
-      uses: stefanprodan/helm-gh-pages@master
+      # Pinned (S8): master as of 2026-11-25, the commit that ran in #45600576226.
+      uses: stefanprodan/helm-gh-pages@89c6698c192e70ed0e495bee7d3d1ca5b477fe82
       with:
         branch: master
         repository: stakater-charts
@@ -114,6 +114,12 @@ jobs:
         commit_username: stakater-user
         commit_email: stakater@gmail.com
 
+    # The Docker-based actions above (github-tag-action, helm-gh-pages) run as root
+    # with the workspace mounted and leave root-owned files under .git; git as the
+    # runner user then cannot add objects. Take the workspace back first.
+    - name: Restore workspace ownership
+      run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+
     # Commit back changes
     - name: Commit files
       run: |
@@ -124,7 +130,8 @@ jobs:
         git commit -m "[skip-ci] Update artifacts" -a
 
     - name: Push changes
-      uses: ad-m/github-push-action@master
+      # Pinned (S8): master as of 2026-11-25.
+      uses: ad-m/github-push-action@7fba72704ad2db819788db8f2d9e7d1dfbebe089
       with:
         github_token: ${{ secrets.PUBLISH_TOKEN }}
         branch: master

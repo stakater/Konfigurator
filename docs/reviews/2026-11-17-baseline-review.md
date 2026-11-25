@@ -188,7 +188,7 @@ an allow-listed root.
 Rendering has no output cap, so a nested `range` over a large context can drive the operator
 out of memory. ConfigMaps are capped at 1 MiB anyway, so output can be capped there.
 
-### 🟠 S8. CI/CD supply chain. *Confirmed*
+### 🟠 S8. CI/CD supply chain. *Confirmed* — ◐ `push.yml` pinned + `GIT_ACCESS_TOKEN` build-arg removed (2026-11-25, post-merge fix); `release.yml` goreleaser@master remains → H.8
 - Third-party actions pinned to **`@master`** while they hold `PUBLISH_TOKEN`:
   `stefanprodan/helm-gh-pages@master`, `ad-m/github-push-action@master`
   (`push.yml:105,128`), `goreleaser/goreleaser-action@master` (`release.yml:29`). Pin to a
@@ -265,3 +265,13 @@ Independent review of the hardening PR; two findings reproduced on real clusters
 | X18 | `webhook` marked `allowed:false`, oversized and non-JSON 2xx permanent; timeout still retried though round 3 said "fixed" | ✅ reclassified next-cycle. Timeout retry with backoff is intended: transient, bounded by the rate limiter; the round-3 starvation came from *permanent* errors being retried, which is what was fixed. Wording corrected |
 | X19 | `mounts` marked a missing container permanent | ✅ next cycle |
 | X20 | Mutation script: no baseline run, trivially-passing grep, in-place edits, only `fail(` sites | ✅ rewritten: baseline must pass first; ≥ 20 mutants required; `go test -overlay`, source never touched; mutates every `return err` / `return nil, err` / `return r.fail(...)` / `RequeueWithError` site and breaks `fail()` four ways |
+
+### Post-merge: first `push.yml` run failed (2026-11-25)
+
+Run 45600576226, step *Commit files*: `insufficient permission for adding an object to
+repository database .git/objects`. Cause: Docker-based actions (`github-tag-action`,
+`helm-gh-pages`) run as root with the workspace mounted and leave root-owned files under
+`.git`. Image `v0.1.40` and chart `0.1.40` were published; the artifact commit and tag were
+not. Fix: `chown` the workspace back before committing, pin the two `@master` actions, drop
+the unused token build-arg. Lesson for H.9: a shared workflow must not mix root-running
+Docker actions with later git writes as the runner user.
