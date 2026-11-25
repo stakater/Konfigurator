@@ -1,9 +1,7 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
@@ -29,14 +27,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - apps
   resources:
   - daemonsets
@@ -52,25 +42,6 @@ rules:
   - konfigurator.stakater.com
   resources:
   - konfiguratortemplates
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - konfigurator.stakater.com
-  resources:
-  - konfiguratortemplates/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - konfigurator.stakater.com
-  resources:
   - podmetadatainjectors
   verbs:
   - create
@@ -83,16 +54,17 @@ rules:
 - apiGroups:
   - konfigurator.stakater.com
   resources:
-  - podmetadatainjectors/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - konfigurator.stakater.com
-  resources:
+  - konfiguratortemplates/status
   - podmetadatainjectors/status
   verbs:
   - get
   - patch
+  - update
+- apiGroups:
+  - konfigurator.stakater.com
+  resources:
+  - podmetadatainjectors/finalizers
+  verbs:
   - update
 - apiGroups:
   - networking.k8s.io

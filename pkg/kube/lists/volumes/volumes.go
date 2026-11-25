@@ -1,24 +1,27 @@
 package volumes
 
 import (
-	"github.com/stakater/konfigurator/api/v1alpha1"
-	"k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type GetVolumesFunc func(interface{}) []corev1.Volume
 type VolumeFunc func(int, corev1.Volume)
 
-var objectKindToVolumesMap = map[string]GetVolumesFunc{
-	string(v1alpha1.AppKindDeployment):  GetDeploymentVolumes,
-	string(v1alpha1.AppKindDaemonSet):   GetDaemonSetVolumes,
-	string(v1alpha1.AppKindStatefulSet): GetStatefulSetVolumes,
-}
-
+// GetFromObject returns the pod-template volumes of a Deployment, DaemonSet or
+// StatefulSet. It dispatches on the Go type, not TypeMeta: controller-runtime's
+// typed client clears TypeMeta after a Get (H.7). Unsupported types yield nil.
 func GetFromObject(target metav1.Object) []corev1.Volume {
-	return objectKindToVolumesMap[target.(runtime.Object).GetObjectKind().GroupVersionKind().Kind](target)
+	switch target.(type) {
+	case *v1.Deployment:
+		return GetDeploymentVolumes(target)
+	case *v1.DaemonSet:
+		return GetDaemonSetVolumes(target)
+	case *v1.StatefulSet:
+		return GetStatefulSetVolumes(target)
+	}
+	return nil
 }
 
 func GetDeploymentVolumes(target interface{}) []corev1.Volume {

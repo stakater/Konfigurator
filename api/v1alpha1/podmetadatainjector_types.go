@@ -57,5 +57,5 @@ type PodMetadataInjectorList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&PodMetadataInjector{}, &PodMetadataInjectorList{})
+	register(&PodMetadataInjector{}, &PodMetadataInjectorList{})
 }

@@ -10,15 +10,17 @@ package controllers
 import (
 	"context"
 
-	xContext "github.com/stakater/konfigurator/pkg/context"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	xContext "github.com/stakater/konfigurator/pkg/context"
 
 	"testing"
 
-	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
+
+	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

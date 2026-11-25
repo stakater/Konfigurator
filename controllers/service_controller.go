@@ -18,15 +18,17 @@ package controllers
 
 import (
 	"context"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	xContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	corev1 "k8s.io/api/core/v1"
+
+	xContext "github.com/stakater/konfigurator/pkg/context"
 )
 
 // ServiceReconciler reconciles a KonfiguratorTemplate object

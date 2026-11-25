@@ -25,9 +25,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	xContext "github.com/stakater/konfigurator/pkg/context"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	v1 "k8s.io/api/networking/v1"
+
+	xContext "github.com/stakater/konfigurator/pkg/context"
 )
 
 // IngressReconciler reconciles a KonfiguratorTemplate object

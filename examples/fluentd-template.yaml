@@ -5,6 +5,8 @@ metadata:
   labels:
     app: konfigurator
 spec:
+  # The webhook host must be allow-listed by the cluster admin (chart value
+  # validationWebhook.allowedHosts), otherwise this template is not rendered.
 #  validationWebhookURL: http://test-fluentd-config-validation-webhook.default.svc/validate/
   validationWebhookURL: http://localhost/validate/
   renderTarget: ConfigMap

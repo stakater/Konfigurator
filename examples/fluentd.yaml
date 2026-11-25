@@ -4,6 +4,8 @@ metadata:
   name: fluentd
 spec:
   renderTarget: ConfigMap
+  # The webhook host must be allow-listed by the cluster admin (chart value
+  # validationWebhook.allowedHosts), otherwise this template is not rendered.
   validationWebhookURL: http://localhost
   app:
     name: fluentd

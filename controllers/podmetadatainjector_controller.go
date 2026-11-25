@@ -18,19 +18,22 @@ package controllers
 
 import (
 	"context"
-	xContext "github.com/stakater/konfigurator/pkg/context"
+	"time"
+
 	finalizerUtil "github.com/stakater/operator-utils/util/finalizer"
 	reconcilerUtil "github.com/stakater/operator-utils/util/reconciler"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"time"
+
+	xContext "github.com/stakater/konfigurator/pkg/context"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+
+	konfiguratorv1alpha1 "github.com/stakater/konfigurator/api/v1alpha1"
 )
 
 // PodMetadataInjectorReconciler reconciles a PodMetadataInjector object
@@ -86,7 +89,7 @@ func (r *PodMetadataInjectorReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		finalizerUtil.AddFinalizer(instance, PodMetadataInjectorFinalizer)
 
-		err := r.Client.Update(ctx, instance)
+		err := r.Update(ctx, instance)
 		if err != nil {
 			return reconcilerUtil.ManageError(r.Client, instance, err, false)
 		}

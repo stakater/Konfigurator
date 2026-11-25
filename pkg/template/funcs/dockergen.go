@@ -3,7 +3,6 @@ package funcs
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -35,7 +34,7 @@ func coalesce(input ...interface{}) interface{} {
 // dirList returns a list of files in the specified path
 func dirList(path string) ([]string, error) {
 	names := []string{}
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		log.Printf("Template error: %v", err)
 		return names, nil
@@ -69,7 +68,7 @@ func keys(input interface{}) (interface{}, error) {
 
 	val := reflect.ValueOf(input)
 	if val.Kind() != reflect.Map {
-		return nil, fmt.Errorf("Cannot call keys on a non-map value: %v", input)
+		return nil, fmt.Errorf("cannot call keys on a non-map value: %v", input)
 	}
 
 	vk := val.MapKeys()
@@ -258,7 +257,7 @@ func getArrayValues(funcName string, entries interface{}) (*reflect.Value, error
 
 	kind := entriesVal.Kind()
 
-	if kind == reflect.Ptr {
+	if kind == reflect.Pointer {
 		entriesVal = reflect.Indirect(entriesVal)
 		kind = entriesVal.Kind()
 	}
@@ -267,7 +266,7 @@ func getArrayValues(funcName string, entries interface{}) (*reflect.Value, error
 	case reflect.Array, reflect.Slice:
 		break
 	default:
-		return nil, fmt.Errorf("Must pass an array or slice to '%v'; received %v; kind %v", funcName, entries, kind)
+		return nil, fmt.Errorf("must pass an array or slice to '%v'; received %v; kind %v", funcName, entries, kind)
 	}
 	return &entriesVal, nil
 }

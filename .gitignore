@@ -112,3 +112,6 @@ tags
 cover.out
 
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
+
+# Locally installed tools and built binaries (H.7)
+/bin/

@@ -3,8 +3,9 @@ package containers
 import (
 	"testing"
 
-	"github.com/stakater/konfigurator/pkg/kube/testutil"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/stakater/konfigurator/pkg/kube/testutil"
 )
 
 func TestGetFromObject(t *testing.T) {

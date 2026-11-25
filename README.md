@@ -20,6 +20,14 @@ A kubernetes operator that can dynamically generate app configuration when kuber
   - Services
   - Ingresses
 
+## Requirements
+
+- **Kubernetes >= 1.30** (OpenShift >= 4.17). The chart enforces this via `kubeVersion`. Older
+  clusters lack CRD validation ratcheting, so a pre-existing KonfiguratorTemplate with an
+  unsupported `app.kind`/`renderTarget` could never be deleted after a CRD upgrade.
+- Upgrading from a release before the validation-webhook allow-list? Read the upgrade notes in
+  [CHANGELOG.md](CHANGELOG.md) first.
+
 ## Deploying to Kubernetes
 
 Deploying Konfigurator requires:
