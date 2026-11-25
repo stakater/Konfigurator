@@ -1,37 +1,31 @@
-name: Release Go project
+name: Release
 
+# Copied from stakater/.github's own release.yaml (H.9): a GitHub Release for every
+# v* tag that push.yml creates. Replaces a goreleaser step that had no config.
 on:
   push:
     tags:
       - "v*"
 
-env:
-  GOLANG_VERSION: 1.27.4
-
 jobs:
-  build:
-    name: GoReleaser build
+  release:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # See: https://goreleaser.com/ci/actions/
+          persist-credentials: false
+          fetch-depth: 0
 
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GOLANG_VERSION }}
-        id: go
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@master
-        with:
-          version: latest
-          args: release --clean
+      - name: Create Release
+        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
 
       - name: Notify Slack
         uses: 8398a7/action-slack@v3

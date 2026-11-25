@@ -188,7 +188,7 @@ an allow-listed root.
 Rendering has no output cap, so a nested `range` over a large context can drive the operator
 out of memory. ConfigMaps are capped at 1 MiB anyway, so output can be capped there.
 
-### 🟠 S8. CI/CD supply chain. *Confirmed*
+### 🟠 S8. CI/CD supply chain. *Confirmed* — ✅ **closed by H.9** (2026-11-25): `push.yml` is a caller of the shared workflow, `release.yml` copied from `stakater/.github`, `helm-gh-pages` pinned to a SHA, token build-arg gone. Remaining in our files: `@vN` release tags on first-party/common actions in `pull_request.yml`
 - Third-party actions pinned to **`@master`** while they hold `PUBLISH_TOKEN`:
   `stefanprodan/helm-gh-pages@master`, `ad-m/github-push-action@master`
   (`push.yml:105,128`), `goreleaser/goreleaser-action@master` (`release.yml:29`). Pin to a

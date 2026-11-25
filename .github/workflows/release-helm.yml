@@ -1,0 +1,54 @@
+name: Release Helm Chart
+
+# Copied from stakater/Forecastle (H.9, docs/releasing.md): the chart is published to
+# the gh-pages chart repo whenever Chart.yaml changes on master. Bump it with
+# `make bump-chart VERSION=x.y.z` in a PR; nothing is committed back from CI.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'charts/konfigurator/Chart.yaml'
+
+env:
+  HELM_REGISTRY_URL: "https://stakater.github.io/stakater-charts"
+
+jobs:
+  release:
+    name: Publish Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: make helm-lint
+
+      - name: Publish Helm chart
+        # Pinned (S8): master as of 2026-11-25, the commit that published 0.1.40.
+        uses: stefanprodan/helm-gh-pages@89c6698c192e70ed0e495bee7d3d1ca5b477fe82
+        with:
+          branch: master
+          repository: stakater-charts
+          target_dir: docs
+          token: ${{ secrets.PUBLISH_TOKEN }}
+          charts_dir: charts
+          charts_url: ${{ env.HELM_REGISTRY_URL }}
+          owner: stakater
+          linting: off
+          commit_username: stakater-user
+          commit_email: stakater@gmail.com
+
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          fields: repo,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.STAKATER_DELIVERY_SLACK_WEBHOOK }}
