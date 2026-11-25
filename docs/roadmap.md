@@ -75,7 +75,7 @@ external review: a webhook dialer guard refusing loopback/link-local addresses (
 actions to SHAs (X8/S8), and a startup check that warns when the API server is below the
 1.30 floor, for kustomize/OLM installs the chart `kubeVersion` cannot guard (X10).
 
-### H.9 — Adopt Stakater shared CI workflows — 📝 Draft · *needs a decision*
+### H.9 — Adopt Stakater shared CI workflows — 🔨 In progress (👍 2026-11-25, option (b): no OLM, gh-pages chart) · [plan](planning/H.9-shared-ci.md)
 As a **Stakater maintainer**, I want Konfigurator to build, test, and release through the shared
 `stakater/.github` operator workflows like kube-ward, so that CI upkeep and action pinning (S8)
 are done once for the org, not per repo.
