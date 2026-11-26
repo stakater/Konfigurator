@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/stakater/operator-utils v0.1.14
+	github.com/stakater/operator-utils v0.1.19
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
 	k8s.io/client-go v0.37.2
