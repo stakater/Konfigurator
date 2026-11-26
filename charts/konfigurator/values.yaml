@@ -27,7 +27,7 @@ validationWebhook:
 
 image:
   repository: stakater/konfigurator
-  tag:  v0.1.39
+  tag:  v0.1.40
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
