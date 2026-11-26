@@ -117,10 +117,11 @@ mutation-check: ## Prove every reconciler error site is covered: swallow each on
 	hack/mutation-check.sh
 
 .PHONY: bump-chart
-bump-chart: ## Set chart version/appVersion/image tag to $(VERSION) (used by CI).
-	sed -i "s/^version:.*/version:  $(VERSION)/" charts/konfigurator/Chart.yaml
-	sed -i "s/^appVersion:.*/appVersion:  $(VERSION)/" charts/konfigurator/Chart.yaml
-	sed -i "s/tag:.*/tag:  v$(VERSION)/" charts/konfigurator/values.yaml
+bump-chart: ## Chart release step (docs/releasing.md): set chart version/appVersion/image tag to $(VERSION).
+	sed -i.bak "s/^version:.*/version:  $(VERSION)/" charts/konfigurator/Chart.yaml
+	sed -i.bak "s/^appVersion:.*/appVersion:  $(VERSION)/" charts/konfigurator/Chart.yaml
+	sed -i.bak "s/^  tag:.*/  tag:  v$(VERSION)/" charts/konfigurator/values.yaml
+	rm -f charts/konfigurator/Chart.yaml.bak charts/konfigurator/values.yaml.bak
 
 ##@ Deployment (kustomize)
 

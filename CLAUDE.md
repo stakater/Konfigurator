@@ -125,8 +125,11 @@ installed with `go install` into the gitignored `./bin`:
 - `make e2e`: kind cluster, real image, real chart, render/mount/reject/cleanup smoke test.
   Use `KEEP_CLUSTER=1` to debug. Needs docker, kubectl, and helm.
 - `make helm-lint`.
-- Upgrading Go: `go.mod`, the Dockerfile builder image, and `GOLANG_VERSION` in all three
-  workflows move together. Always use a supported Go (one of the two newest minors).
+- Upgrading Go: `go.mod`, the Dockerfile builder image, and `GOLANG_VERSION` in
+  `pull_request.yml` move together.
+- **Releases:** `docs/releasing.md`. Merging to `master` pushes an image + git tag through the
+  shared `stakater/.github` workflow; the chart is released by a `Chart.yaml` bump PR
+  (`make bump-chart VERSION=x.y.z`). CI never commits to `master`. Always use a supported Go (one of the two newest minors).
   k8s libs, controller-runtime, and controller-tools move as a set, and need a green
   `make e2e`.
 

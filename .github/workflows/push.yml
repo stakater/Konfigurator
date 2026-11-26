@@ -5,143 +5,24 @@ on:
     branches:
       - master
 
-env:
-  DOCKER_FILE_PATH: Dockerfile
-  GOLANG_VERSION: 1.27.4
-  OPERATOR_SDK_VERSION: "1.2.0"
-  KUSTOMIZE_VERSION: "3.5.4"
-  CONTAINER_REGISTRY_URL: ghcr.io/stakater
+# The shared workflow tags and pushes with the PUBLISH_TOKEN PAT; GITHUB_TOKEN needs nothing.
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build
-    if: "! contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Check out code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-
-    - name: Set up Go
-      id: go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GOLANG_VERSION }}
-
-    - name: Verify
-      run: make verify codegen-check vulncheck helm-lint mutation-check
-
-    - name: Generate Tag
-      id: generate_tag
-      uses: anothrNick/github-tag-action@1.71.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-        WITH_V: true
-        DEFAULT_BUMP: patch
-        RELEASE_BRANCHES: master
-        DRY_RUN: true
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Login to Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.CONTAINER_REGISTRY_URL }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GHCR_TOKEN }}
-
-    - name: Generate image repository path
-      run: |
-        echo IMAGE_REPOSITORY=$(echo ${{ env.CONTAINER_REGISTRY_URL }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
-
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        file: ${{ env.DOCKER_FILE_PATH  }}
-        platforms: linux/amd64,linux/arm64
-        pull: true
-        push: true
-        build-args: GIT_ACCESS_TOKEN=${{ secrets.PUBLISH_TOKEN }}
-        cache-to: type=inline
-        tags: |
-          ${{ env.IMAGE_REPOSITORY }}:${{ steps.generate_tag.outputs.new_tag }}
-        labels: |
-          org.opencontainers.image.source=${{ github.event.repository.clone_url }}
-          org.opencontainers.image.revision=${{ github.sha }}
-
-    # Generate tag for operator without "v"
-    - name: Generate Operator Tag
-      id: generate_operator_tag
-      uses: anothrNick/github-tag-action@1.71.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-        WITH_V: false
-        DEFAULT_BUMP: patch
-        RELEASE_BRANCHES: master
-        DRY_RUN: true
-
-    # Update chart tag to the latest semver tag
-    - name: Update Chart Version
-      env:
-        VERSION: ${{ steps.generate_operator_tag.outputs.new_tag }}
-      run: make bump-chart
-
-    - name: Update Chart CRDs
-      run: make manifests
-
-    # Setting up helm binary
-    - uses: azure/setup-helm@v4
-
-    # Publish helm chart
-    - name: Publish Helm chart
-      uses: stefanprodan/helm-gh-pages@master
-      with:
-        branch: master
-        repository: stakater-charts
-        target_dir: docs
-        token: ${{ secrets.PUBLISH_TOKEN }}
-        charts_dir: charts
-        charts_url: ${{ secrets.HELM_REGISTRY_URL }}
-        owner: stakater
-        linting: off
-        commit_username: stakater-user
-        commit_email: stakater@gmail.com
-
-    # Commit back changes
-    - name: Commit files
-      run: |
-        git config --local user.email "github-root@stakater.com"
-        git config --local user.name "stakater-github-root"
-        git status
-        git add .
-        git commit -m "[skip-ci] Update artifacts" -a
-
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.PUBLISH_TOKEN }}
-        branch: master
-
-    - name: Push Latest Tag
-      uses: anothrNick/github-tag-action@1.71.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-        WITH_V: true
-        RELEASE_BRANCHES: master
-        DEFAULT_BUMP: patch
-
-    - name: Notify Slack
-      uses: 8398a7/action-slack@v3
-      if: always() # Pick up events even if the job fails or is canceled.
-      with:
-        status: ${{ job.status }}
-        fields: repo,author,action,eventName,ref,workflow
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.STAKATER_DELIVERY_SLACK_WEBHOOK }}
+  push-container:
+    name: Push Container
+    # Shared Stakater workflow (H.9, docs/releasing.md): derives the next tag from the
+    # existing git tags, builds and pushes ghcr.io/stakater/konfigurator:<tag>, then
+    # pushes the tag. Nothing is committed back to master. Verification runs in
+    # pull_request.yml before merge; chart releases run in release-helm.yml.
+    uses: stakater/.github/.github/workflows/push_container.yaml@main
+    secrets:
+      CONTAINER_REGISTRY_URL: ghcr.io/stakater
+      CONTAINER_REGISTRY_USERNAME: stakater-user
+      CONTAINER_REGISTRY_PASSWORD: ${{ secrets.GHCR_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.STAKATER_DELIVERY_SLACK_WEBHOOK }}
+      GH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+    with:
+      DOCKER_FILE_PATH: Dockerfile
+      RELEASE_BRANCH: master

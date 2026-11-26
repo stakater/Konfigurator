@@ -53,6 +53,12 @@ publishes a release (`push.yml`), so this section must be current before merge.
   clears after a `Get` (H.7, B12).
 
 ### Changed
-- Image is multi-arch (`linux/amd64`, `linux/arm64`).
+- Release pipeline moved to the shared Stakater workflows (H.9): image + git tag on every
+  merge to `master`, GitHub Release on the tag, chart published when `Chart.yaml` changes.
+  Chart versions are bumped by PR (`make bump-chart VERSION=x.y.z`), no longer committed by
+  CI. See `docs/releasing.md`.
+- Image is `linux/amd64` only for now: the shared workflow sets no `platforms:`. The
+  Dockerfile cross-compiles, so arm64 returns once `stakater/.github` gains a `PLATFORMS`
+  input (H.9.1). No released version was ever multi-arch.
 - Build tooling: pinned tools under `./bin`, `make verify` (vet, build, lint, race tests),
   `codegen-check`, `vulncheck`, kind-based `e2e`; committed binaries removed (H.7).
