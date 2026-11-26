@@ -7,6 +7,10 @@ on:
     tags:
       - "v*"
 
+# actions/create-release uses GITHUB_TOKEN and must be able to create the release.
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest

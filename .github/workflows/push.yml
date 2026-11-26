@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+# The shared workflow tags and pushes with the PUBLISH_TOKEN PAT; GITHUB_TOKEN needs nothing.
+permissions:
+  contents: read
+
 jobs:
   push-container:
     name: Push Container

@@ -13,6 +13,10 @@ on:
 env:
   HELM_REGISTRY_URL: "https://stakater.github.io/stakater-charts"
 
+# helm-gh-pages pushes to stakater-charts with the PUBLISH_TOKEN PAT; GITHUB_TOKEN needs nothing.
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Publish Helm Chart
